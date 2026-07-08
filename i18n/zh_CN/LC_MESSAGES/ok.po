@@ -95,7 +95,7 @@ msgstr ""
 msgid "停用"
 msgstr ""
 
-msgid "先扫描或手动填写"
+msgid "先扫描并关联特征或手动填写"
 msgstr ""
 
 msgid "出招表"
@@ -149,7 +149,7 @@ msgstr ""
 msgid "填入扫描"
 msgstr ""
 
-msgid "关联 <b style=\"color: #0078d7;\">角色特征</b> 后将自动判断当前角色。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特征</b>，可以直接启用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
+msgid "这是个用于向数据库关联或添加 <b style=\"color: #0078d7;\">角色特征</b> 的工具面板。<br>点击 <b style=\"color: #0078d7;\">{scan_team}</b> 后点击 <b style=\"color: #0078d7;\">关联或添加</b> 特征，自动战斗时就会识别对应的角色。<br><b style=\"color: #d83b01;\">💡 注意：</b>此面板 <b style=\"color: #d83b01;\">不会</b> 在进入战斗或更换阵容时实时自动刷新或同步显示, 因为这是工具面板。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特征</b>，可以直接使用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
 msgstr ""
 
 msgid "完成每日活跃度"
@@ -807,6 +807,12 @@ msgstr "繁體中文"
 msgid "文案生成模型调用地址, 需兼容OpenAI接口请求格式"
 msgstr ""
 
+msgid "模型调用超时时间(s)"
+msgstr ""
+
+msgid "文案生成调用模型的超时时间, 超时将回退使用本地词库, 留空使用30s"
+msgstr ""
+
 msgid "关闭后将降级使用本地词库抽取发帖回复文案"
 msgstr ""
 
@@ -906,7 +912,7 @@ msgstr ""
 msgid "使用任何路径前请先阅读使用说明"
 msgstr ""
 
-msgid "循环次数, 设置为0则一直运行"
+msgid "设置为0则一直运行"
 msgstr ""
 
 msgid "战斗角色"
@@ -1006,4 +1012,73 @@ msgstr ""
 
 
 msgid "除了选择内建存在的<b style=\"color: #0078d7;\">{combo}</b>外，您也可以自己输入名称来建立自己的<b style=\"color: #0078d7;\">{combo}</b>。"
+msgstr ""
+
+msgid "九百九十九夜"
+msgstr ""
+
+msgid "巧克力火山-底层最左边的篝火"
+msgstr ""
+
+msgid "挂机刷经验"
+msgstr ""
+
+msgid "位置"
+msgstr ""
+
+msgid "赤龙古堡-龙之高塔室外篝火"
+msgstr ""
+
+msgid "使用终结技"
+msgstr ""
+
+msgid "Background Audio Routing"
+msgstr "后台音频路由"
+
+msgid "Enable Background Audio Routing"
+msgstr "启用后台音频路由"
+
+msgid "SoundVolumeCommandLine Path"
+msgstr "SoundVolumeCommandLine 路径"
+
+msgid "Background Output Device"
+msgstr "后台输出设备"
+
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "打开 SoundVolumeCommandLine 下载页面"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "当游戏处于后台时，可选择性地将游戏音频路由到选定的 Windows 输出设备。本软件未内置 SoundVolumeCommandLine，请选择您自己下载的版本。"
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "当游戏窗口离开前台时，切换游戏音频输出"
+
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "选择从 NirSoft 下载的 svcl.exe"
+
+msgid "Output device used while the game is in the background"
+msgstr "游戏处于后台时使用的输出设备"
+
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "打开 NirSoft SoundVolumeCommandLine 官方页面"
+
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;可执行文件 (*.exe);;所有文件 (*)"
+
+msgid "Select svcl.exe"
+msgstr "选择 svcl.exe"
+
+msgid "Open Download Page"
+msgstr "打开下载页面"
+
+msgid "⚠️ 正在运行{rob_mode}\n该模式会高频占用/争夺鼠标。如需停止，请使用热键暂停 ok-nte, 再手动停止任务。\n当前热键: {hotkey} (如无法确认当前热键则点击取消, 主动确认后再运行)"
+msgstr ""
+
+msgid "赤龙古堡-残丝长巷篝火"
+msgstr ""
+
+msgid "战斗时长上限"
+msgstr ""
+
+msgid "战斗时不切人"
 msgstr ""

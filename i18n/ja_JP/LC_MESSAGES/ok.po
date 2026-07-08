@@ -97,8 +97,8 @@ msgstr "保存成功"
 msgid "停用"
 msgstr "無効化"
 
-msgid "先扫描或手动填写"
-msgstr "先にスキャンするか手動で入力してください"
+msgid "先扫描并关联特征或手动填写"
+msgstr "先にスキャンして特徴を関連付けるか、手動で入力してください"
 
 msgid "出招表"
 msgstr "コンボリスト"
@@ -151,8 +151,8 @@ msgstr "マップ内で自動テレポート"
 msgid "填入扫描"
 msgstr "スキャン結果を入力"
 
-msgid "关联 <b style=\"color: #0078d7;\">角色特征</b> 后将自动判断当前角色。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特征</b>，可以直接启用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
-msgstr "<b style=\"color: #0078d7;\">キャラクター特徴</b>を関連付けると、現在のキャラクターを自動的に判別します。<br><b style=\"color: #0078d7;\">キャラクター特徴</b>を管理したくない場合は、<b style=\"color: #0078d7;\">{fixed_team}</b> 機能を直接有効にできます。"
+msgid "这是个用于向数据库关联或添加 <b style=\"color: #0078d7;\">角色特征</b> 的工具面板。<br>点击 <b style=\"color: #0078d7;\">{scan_team}</b> 后点击 <b style=\"color: #0078d7;\">关联或添加</b> 特征，自动战斗时就会识别对应的角色。<br><b style=\"color: #d83b01;\">💡 注意：</b>此面板 <b style=\"color: #d83b01;\">不会</b> 在进入战斗或更换阵容时实时自动刷新或同步显示, 因为这是工具面板。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特征</b>，可以直接使用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
+msgstr "これはデータベースに<b style=\"color: #0078d7;\">キャラクター特徴</b>を関連付け、または追加するためのツールパネルです。<br><b style=\"color: #0078d7;\">{scan_team}</b>をクリックした後に、特徴の<b style=\"color: #0078d7;\">関連付けまたは追加</b>をクリックすると、自動戦闘時に対応するキャラクターが識別されます。<br><b style=\"color: #d83b01;\">💡 注意：</b>このパネルはツールパネルであるため、戦闘に入ったときやチーム編成を変更したときにリアルタイムで自動更新または同期表示<b style=\"color: #d83b01;\">されません</b>。<br><b style=\"color: #0078d7;\">キャラクター特徴</b>を管理したくない場合は、<b style=\"color: #0078d7;\">{fixed_team}</b>機能を直接使用できます。"
 
 msgid "完成每日活跃度"
 msgstr "デイリーアクティビティを完了"
@@ -824,6 +824,12 @@ msgstr "繁體中文"
 msgid "文案生成模型调用地址, 需兼容OpenAI接口请求格式"
 msgstr "テキスト生成モデルのAPIエンドポイント（OpenAI互換形式）"
 
+msgid "模型调用超时时间(s)"
+msgstr "モデル呼び出しタイムアウト時間(s)"
+
+msgid "文案生成调用模型的超时时间, 超时将回退使用本地词库, 留空使用30s"
+msgstr "テキスト生成モデル呼び出しのタイムアウト時間。タイムアウト時はローカル単語帳にフォールバックします。空欄の場合は30秒。"
+
 msgid "关闭后将降级使用本地词库抽取发帖回复文案"
 msgstr "オフにすると、ローカル辞書を使用して投稿・返信テキストを生成します"
 
@@ -923,8 +929,8 @@ msgstr ""
 msgid "使用任何路径前请先阅读使用说明"
 msgstr "ルートを使用する前に使用説明をお読みください"
 
-msgid "循环次数, 设置为0则一直运行"
-msgstr "ループ回数（0に設定すると無限実行）"
+msgid "设置为0则一直运行"
+msgstr "0に設定すると無限実行"
 
 msgid "战斗角色"
 msgstr "戦闘キャラクター (Combat Team)"
@@ -1024,3 +1030,72 @@ msgstr "2時間ごとに再ログイン"
 
 msgid "除了选择内建存在的<b style=\"color: #0078d7;\">{combo}</b>外，您也可以自己输入名称来建立自己的<b style=\"color: #0078d7;\">{combo}</b>。"
 msgstr "組み込みの<b style=\"color: #0078d7;\">{combo}</b>を選択するだけでなく、名前を入力して独自の<b style=\"color: #0078d7;\">{combo}</b>を作成することもできます。"
+
+msgid "九百九十九夜"
+msgstr "九百九十九夜"
+
+msgid "巧克力火山-底层最左边的篝火"
+msgstr "チョコレート火山-最下層一番左の篝火"
+
+msgid "挂机刷经验"
+msgstr "放置EXP稼ぎ"
+
+msgid "位置"
+msgstr "位置"
+
+msgid "赤龙古堡-龙之高塔室外篝火"
+msgstr "赤竜の古城-竜の高塔屋外の篝火"
+
+msgid "使用终结技"
+msgstr "アルティメットスキルを使用"
+
+msgid "Background Audio Routing"
+msgstr "バックグラウンドオーディオルーティング"
+
+msgid "Enable Background Audio Routing"
+msgstr "バックグラウンドオーディオルーティングを有効にする"
+
+msgid "SoundVolumeCommandLine Path"
+msgstr "SoundVolumeCommandLineのパス"
+
+msgid "Background Output Device"
+msgstr "バックグラウンド出力デバイス"
+
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "SoundVolumeCommandLineダウンロードページを開く"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "ゲームがバックグラウンドにある間、ゲーム音声を指定したWindows出力デバイスにルーティングします。SoundVolumeCommandLineは同梱されていません。ダウンロードしたファイルを選択してください。"
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "ゲームウィンドウが最前面（アクティブ）から外れたときにゲームの音声出力を切り替える"
+
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "NirSoftからダウンロードしたsvcl.exeを選択する"
+
+msgid "Output device used while the game is in the background"
+msgstr "ゲームがバックグラウンドにあるときに使用する出力デバイス"
+
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "NirSoft SoundVolumeCommandLineの公式サイトを開く"
+
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;実行可能ファイル (*.exe);;すべてのファイル (*)"
+
+msgid "Select svcl.exe"
+msgstr "svcl.exeの選択"
+
+msgid "Open Download Page"
+msgstr "ダウンロードページを開く"
+
+msgid "⚠️ 正在运行{rob_mode}\n该模式会高频占用/争夺鼠标。如需停止，请使用热键暂停 ok-nte, 再手动停止任务。\n当前热键: {hotkey} (如无法确认当前热键则点击取消, 主动确认后再运行)"
+msgstr "⚠️ {rob_mode}を実行中\nこのモードは高頻度でマウスを占有/奪い合います。停止するには、ホットキーで ok-nte を一時停止してから、手動でタスクを停止してください。\n現在のホットキー: {hotkey} (現在のホットキーを確認できない場合はキャンセルをクリックし、自分で確認してから実行してください)"
+
+msgid "赤龙古堡-残丝长巷篝火"
+msgstr "赤竜の古城-残糸の長巷の篝火"
+
+msgid "战斗时长上限"
+msgstr "最大戦闘時間"
+
+msgid "战斗时不切人"
+msgstr "戦闘中にキャラクターを切り替えない"

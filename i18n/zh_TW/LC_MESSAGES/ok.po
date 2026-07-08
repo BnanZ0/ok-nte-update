@@ -97,8 +97,8 @@ msgstr "儲存成功"
 msgid "停用"
 msgstr "停用"
 
-msgid "先扫描或手动填写"
-msgstr "先掃描或手動填寫"
+msgid "先扫描并关联特征或手动填写"
+msgstr "先掃描並關聯特徵或手動填寫"
 
 msgid "出招表"
 msgstr "出招表"
@@ -151,8 +151,8 @@ msgstr "地圖中自動點擊傳送"
 msgid "填入扫描"
 msgstr "填入掃描"
 
-msgid "关联 <b style=\"color: #0078d7;\">角色特征</b> 后将自动判断当前角色。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特征</b>，可以直接启用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
-msgstr "關聯 <b style=\"color: #0078d7;\">角色特徵</b> 後將自動判斷當前角色。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特徵</b>，可以直接啟用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
+msgid "这是个用于向数据库关联或添加 <b style=\"color: #0078d7;\">角色特征</b> 的工具面板。<br>点击 <b style=\"color: #0078d7;\">{scan_team}</b> 后点击 <b style=\"color: #0078d7;\">关联或添加</b> 特征，自动战斗时就会识别对应的角色。<br><b style=\"color: #d83b01;\">💡 注意：</b>此面板 <b style=\"color: #d83b01;\">不会</b> 在进入战斗或更换阵容时实时自动刷新或同步显示, 因为这是工具面板。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特征</b>，可以直接使用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
+msgstr "這是個用於向資料庫關聯或添加 <b style=\"color: #0078d7;\">角色特徵</b> 的工具面板。<br>點擊 <b style=\"color: #0078d7;\">{scan_team}</b> 後點擊 <b style=\"color: #0078d7;\">關聯或添加</b> 特徵，自動戰鬥時就會識別對應的角色。<br><b style=\"color: #d83b01;\">💡 注意：</b>此面板 <b style=\"color: #d83b01;\">不會</b> 在進入戰鬥或更換陣容時即時自動重新整理或同步顯示, 因為這是工具面板。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特徵</b>，可以直接使用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
 
 msgid "完成每日活跃度"
 msgstr "完成每日活躍度"
@@ -824,6 +824,12 @@ msgstr "繁體中文"
 msgid "文案生成模型调用地址, 需兼容OpenAI接口请求格式"
 msgstr "文案生成模型調用連結，需相容OpenAI介面請求格式"
 
+msgid "模型调用超时时间(s)"
+msgstr "模型呼叫逾時時間(s)"
+
+msgid "文案生成调用模型的超时时间, 超时将回退使用本地词库, 留空使用30s"
+msgstr "文案生成呼叫模型的逾時時間, 逾時將退回使用本地詞庫, 留空使用30秒"
+
 msgid "关闭后将降级使用本地词库抽取发帖回复文案"
 msgstr "關閉後將降級使用本地詞庫抽取發文與回覆文案"
 
@@ -923,8 +929,8 @@ msgstr ""
 msgid "使用任何路径前请先阅读使用说明"
 msgstr "使用任何路徑前請先閱讀使用說明"
 
-msgid "循环次数, 设置为0则一直运行"
-msgstr "循環次數，設定為0則一直運行"
+msgid "设置为0则一直运行"
+msgstr "設定為0則一直運行"
 
 msgid "战斗角色"
 msgstr "戰鬥角色"
@@ -1024,3 +1030,72 @@ msgstr "每2小時重新登入"
 
 msgid "除了选择内建存在的<b style=\"color: #0078d7;\">{combo}</b>外，您也可以自己输入名称来建立自己的<b style=\"color: #0078d7;\">{combo}</b>。"
 msgstr "除了選擇內建存在的<b style=\"color: #0078d7;\">{combo}</b>外，您也可以自己輸入名稱來建立自己的<b style=\"color: #0078d7;\">{combo}</b>。"
+
+msgid "九百九十九夜"
+msgstr "九百九十九夜"
+
+msgid "巧克力火山-底层最左边的篝火"
+msgstr "巧克力火山-底層最左邊的篝火"
+
+msgid "挂机刷经验"
+msgstr "掛機刷經驗"
+
+msgid "位置"
+msgstr "位置"
+
+msgid "赤龙古堡-龙之高塔室外篝火"
+msgstr "赤龍古堡-龍之高塔室外篝火"
+
+msgid "使用终结技"
+msgstr "使用終結技"
+
+msgid "Background Audio Routing"
+msgstr "背景音訊路由"
+
+msgid "Enable Background Audio Routing"
+msgstr "啟用背景音訊路由"
+
+msgid "SoundVolumeCommandLine Path"
+msgstr "SoundVolumeCommandLine 路徑"
+
+msgid "Background Output Device"
+msgstr "背景輸出裝置"
+
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "開啟 SoundVolumeCommandLine 下載頁面"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "當遊戲處於背景時，可選擇性地將遊戲音訊路由到選定的 Windows 輸出裝置。本軟體未內置 SoundVolumeCommandLine，請選擇您自己下載的版本。"
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "當遊戲視窗離開前景時，切換遊戲音訊輸出"
+
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "選擇從 NirSoft 下載的 svcl.exe"
+
+msgid "Output device used while the game is in the background"
+msgstr "遊戲處於背景時使用的輸出裝置"
+
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "開啟 NirSoft SoundVolumeCommandLine 官方頁面"
+
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;可執行檔 (*.exe);;所有檔案 (*)"
+
+msgid "Select svcl.exe"
+msgstr "選擇 svcl.exe"
+
+msgid "Open Download Page"
+msgstr "開啟下載頁面"
+
+msgid "⚠️ 正在运行{rob_mode}\n该模式会高频占用/争夺鼠标。如需停止，请使用热键暂停 ok-nte, 再手动停止任务。\n当前热键: {hotkey} (如无法确认当前热键则点击取消, 主动确认后再运行)"
+msgstr "⚠️ 正在運行{rob_mode}\n該模式會高頻佔用/爭奪滑鼠。如需停止，請使用熱鍵暫停 ok-nte, 再手動停止任務。\n當前熱鍵: {hotkey} (如無法確認當前熱鍵則點擊取消, 主動確認後再運行)"
+
+msgid "赤龙古堡-残丝长巷篝火"
+msgstr "赤龍古堡-殘絲長巷篝火"
+
+msgid "战斗时长上限"
+msgstr "戰鬥時長上限"
+
+msgid "战斗时不切人"
+msgstr "戰鬥時不切人"

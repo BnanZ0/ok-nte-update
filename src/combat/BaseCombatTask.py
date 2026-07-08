@@ -2,8 +2,6 @@ import re
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
-from threading import Lock, Thread
-from typing import List
 
 import cv2
 import numpy as np
@@ -11,13 +9,14 @@ from ok import Box, Logger, safe_get
 
 from src import text_white_color
 from src.char.BaseChar import BaseChar, Element
-from src.char.CharFactory import get_char_by_name, get_char_by_pos
+from src.char.CharFactory import get_char_by_id, get_char_by_pos
 from src.char.custom.CustomCharManager import CustomCharManager
 from src.char.Healer import Healer
 from src.combat.CombatCheck import CombatCheck
 from src.combat.planner import CombatPlanner
 from src.Labels import Labels
 from src.sound_trigger.SoundCombatContext import ACTION_UNSET, SoundCombatContext
+from src.tasks.mixin.CharUIMixin import CharElementUIMixin
 from src.utils import game_filters as gf
 from src.utils import image_utils as iu
 
@@ -52,7 +51,7 @@ class SleepCheckSkip:
             setattr(self, field.name, value)
 
 
-class BaseCombatTask(CombatCheck):
+class BaseCombatTask(CharElementUIMixin, CombatCheck):
     """基础战斗任务类，封装了游戏"鸣潮"中角色自动化操作的通用逻辑。"""
 
     hot_key_verified = False  # 热键是否已验证
@@ -76,9 +75,6 @@ class BaseCombatTask(CombatCheck):
         Element.YELLOW,
     )
     element_ring_index = {element: index for index, element in enumerate(element_ring)}
-    _element_template_cache = {}
-    _element_template_cache_lock = Lock()
-    _element_template_preheat_started = False
 
     def __init__(self, *args, **kwargs):
         """初始化战斗任务。
@@ -103,91 +99,6 @@ class BaseCombatTask(CombatCheck):
         self.clear_element_reactions()
         self.preheat_element_template_cache_async()
         CustomCharManager().preheat_feature_cache_async()
-
-    @staticmethod
-    def _process_template_transparency(img):
-        if img is None:
-            return None
-        if len(img.shape) == 2:
-            return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-        if img.shape[2] == 4:
-            b, g, r, a = cv2.split(img)
-            black_bg = np.zeros_like(img[:, :, :3])
-            alpha_factor = a.astype(float) / 255.0
-            alpha_factor = cv2.merge([alpha_factor, alpha_factor, alpha_factor])
-
-            foreground = cv2.merge([b, g, r]).astype(float)
-            background = black_bg.astype(float)
-
-            final_img = cv2.add(
-                cv2.multiply(foreground, alpha_factor),
-                cv2.multiply(background, 1.0 - alpha_factor),
-            )
-            return final_img.astype(np.uint8)
-        return img
-
-    @staticmethod
-    def _preprocess_element_template_image(image):
-        return iu.binarize_bgr_by_adaptive_center(image)
-
-    @classmethod
-    def _load_element_template(cls, element):
-        raw_template = cv2.imread(f"assets/esper_icons/{element.value}.png", cv2.IMREAD_UNCHANGED)
-        if raw_template is None:
-            return None
-
-        h, w = raw_template.shape[:2]
-        raw_template = cls._process_template_transparency(raw_template)
-        if raw_template is None:
-            return None
-
-        element_scale = 0.5
-        raw_template = cv2.resize(
-            raw_template,
-            (int(w * element_scale), int(h * element_scale)),
-            interpolation=cv2.INTER_NEAREST,
-        )
-        template_bin = cls._preprocess_element_template_image(raw_template)
-        _, mask = cv2.threshold(template_bin, 127, 255, cv2.THRESH_BINARY)
-        kernel = np.ones((30, 30), np.uint8)
-        mask = cv2.dilate(mask, kernel, iterations=1)
-        return raw_template, mask
-
-    @classmethod
-    def build_element_template_cache(cls):
-        with cls._element_template_cache_lock:
-            if cls._element_template_cache:
-                return
-
-        built_cache = {}
-        for element in cls.element_ring:
-            template_data = cls._load_element_template(element)
-            if template_data is not None:
-                built_cache[element] = template_data
-
-        with cls._element_template_cache_lock:
-            if not cls._element_template_cache:
-                cls._element_template_cache = built_cache
-
-    @classmethod
-    def _preheat_element_template_cache_worker(cls):
-        try:
-            cls.build_element_template_cache()
-            logger.debug(f"preheated {len(cls._element_template_cache)} element templates")
-        except Exception as e:
-            logger.error("Failed to preheat element templates", e)
-
-    @classmethod
-    def preheat_element_template_cache_async(cls):
-        with cls._element_template_cache_lock:
-            if cls._element_template_preheat_started or cls._element_template_cache:
-                return
-            cls._element_template_preheat_started = True
-        Thread(
-            target=cls._preheat_element_template_cache_worker,
-            name="element-template-cache-preheat",
-            daemon=True,
-        ).start()
 
     @property
     def team_size(self):
@@ -430,7 +341,7 @@ class BaseCombatTask(CombatCheck):
             current = 0
         return current
 
-    def combat_once(self, wait_combat_time=200, raise_if_not_found=True):
+    def combat_once(self, wait_combat_time=200, max_combat_time=1200, raise_if_not_found=True):
         """执行一次完整的战斗流程。
 
         Args:
@@ -444,9 +355,13 @@ class BaseCombatTask(CombatCheck):
         self.info["Combat Count"] = self.info.get("Combat Count", 0) + 1
         with self.retarget_turn_policy(enable=True):
             try:
+                deadline = time.time() + max_combat_time
                 while self.in_combat():
                     logger.debug(f"combat_once loop {self.chars}")
                     self.get_current_char(raise_exception=True).perform()
+                    if time.time() > deadline:
+                        logger.info(f"Combat maximum duration of {max_combat_time}s reached.")
+                        break
             except CharDeadException as e:
                 raise e
             except NotInCombatException as e:
@@ -455,12 +370,9 @@ class BaseCombatTask(CombatCheck):
         self.wait_in_team_and_world(time_out=10, raise_if_not_found=False)
 
     def _get_char_log_name(self, char: "BaseChar"):
-        from src.char.custom.CustomChar import CustomChar
-
-        if type(char) in (BaseChar, CustomChar):
+        if hasattr(char, "char_name"):
             return char.char_name
-        else:
-            return char.name
+        return getattr(char, "name", "None")
 
     def _decide_switch_to(
         self,
@@ -662,7 +574,7 @@ class BaseCombatTask(CombatCheck):
             return None, last_index_check
 
         last_index_check = current_time
-        if self.is_char_at_index(switch_to.index, frame=frame):
+        if self.is_char_at_index(switch_to.index, frame=frame, char_count=self.team_size):
             return "char index fallback", last_index_check
         return None, last_index_check
 
@@ -708,6 +620,34 @@ class BaseCombatTask(CombatCheck):
             free_intro=free_intro,
             retry_intro=True,
             log_prefix=f"planner switch_next_char ({decision.reason})",
+        )
+
+    def switch_other_char(self, current_char: "BaseChar"):
+        from src.tasks.trigger.AutoCombatTask import AutoCombatTask
+
+        if isinstance(self, AutoCombatTask):
+            current_char.logger.debug("AutoCombatTask, skip switch_other_char")
+            return
+        target_index = next(
+            (c.index for c in self.chars if c and c.index != current_char.index),
+            (current_char.index + 1) % len(self.chars),
+        )
+        next_char = str(target_index + 1)
+        current_char.logger.debug(
+            f"{current_char.char_name} on_combat_end {current_char.index} "
+            f"switch next char: {next_char}"
+        )
+        start = time.time()
+        while time.time() - start < 6:
+            in_team, current_index, _ = self.in_team()
+            if in_team and current_index != current_char.index:
+                for char in filter(None, self.chars):
+                    char.is_current_char = char.index == current_index
+                break
+            self.send_key(next_char)
+            current_char.sleep(0.2, False)
+        current_char.logger.debug(
+            f"switch_other_char on_combat_end {current_char.index} switch end"
         )
 
     def switch_to_combat_start_char(self):
@@ -906,19 +846,25 @@ class BaseCombatTask(CombatCheck):
 
     def _do_load_char(self, index: int, fixed_slots) -> "BaseChar":
         fixed_slot = safe_get(fixed_slots, index)
-        fixed_char_name = ""
-        fixed_combo_ref = ""
+        fixed_char_id = ""
+        fixed_combo_id = ""
         if isinstance(fixed_slot, dict):
-            fixed_char_name = str(fixed_slot.get("char_name", "") or "").strip()
-            fixed_combo_ref = str(fixed_slot.get("combo_ref", "") or "").strip()
-
-        if fixed_char_name:
-            self.log_debug(
-                f"load_chars use fixed slot {index + 1}: {fixed_char_name} {fixed_combo_ref}"
-            )
-            return get_char_by_name(
-                self, index, fixed_char_name, confidence=1, combo_ref=fixed_combo_ref
-            )
+            fixed_char_id = fixed_slot.get("char_id", "")
+            fixed_combo_id = fixed_slot.get("combo_id", "")
+            if fixed_char_id:
+                char_info = CustomCharManager().get_character_info_by_id(fixed_char_id)
+                if not char_info:
+                    self.logger.warning(f"Fixed char {index} not found: {fixed_char_id}")
+                    fixed_char_id = ""
+                    fixed_combo_id = ""
+                else:
+                    fixed_char_name = char_info["char_name"]
+                    self.logger.info(
+                        f"Using fixed char {index}: {fixed_char_name} {fixed_combo_id}"
+                    )
+                    return get_char_by_id(
+                        self, index, fixed_char_id, confidence=1, combo_id=fixed_combo_id
+                    )
 
         box_scaled = self.get_char_box(index).scale(1.1, 1.1)
 
@@ -974,7 +920,7 @@ class BaseCombatTask(CombatCheck):
                 conf = char.confidence
                 elem = char.element
                 self.log_info(f"load char success {char} {name} {conf:.2f} {elem}")
-                self.info_add_to_list("chars", f"{char.char_name}: {char.combo_label}")
+                self.info_add_to_list("chars", f"{char.char_name}: {char.combo_name}")
 
         if self.team_size > 0:
             self.combat_start = time.time()
@@ -982,59 +928,6 @@ class BaseCombatTask(CombatCheck):
             self._apply_sound_config()
         logger.debug(f"load_chars cost {time.perf_counter() - now:.3f}s")
         return ret
-
-    def load_chars_element(self, indices: List[int]) -> dict:
-        results = {}
-        self.build_element_template_cache()
-
-        base_box = self.get_base_char_element_box()
-
-        _frame = self.frame
-        # self.screenshot("load_chars_element", _frame)
-
-        for i in indices:
-            base_scale = 8
-            scale = base_scale * 1440 / self.height
-            current_box = self.get_box_by_char_spacing(base_box, i)
-            crop_img = current_box.crop_frame(_frame)
-            crop_h, crop_w = crop_img.shape[:2]
-            crop_resized = cv2.resize(
-                crop_img,
-                (int(crop_w * scale), int(crop_h * scale)),
-                interpolation=cv2.INTER_NEAREST,
-            )
-            # iu.show_images([crop_resized, crop_img], [f"crop_resized_{i}", f"crop_img_{i}"])
-
-            best_element = Element.DEFAULT
-            max_score = -1.0
-
-            for element in self.element_ring:
-                template_data = self._element_template_cache.get(element)
-                if template_data is None:
-                    continue
-                template_img, template_mask = template_data
-
-                match_score = 0
-                if crop_resized is not None and template_img is not None:
-                    res = cv2.matchTemplate(
-                        crop_resized, template_img, cv2.TM_CCOEFF_NORMED, mask=template_mask
-                    )
-                    res[np.isinf(res)] = 0
-                    _, match_score, _, _ = cv2.minMaxLoc(res)
-
-                if match_score > max_score:
-                    max_score = match_score
-                    best_element = element
-
-            current_box.confidence = max_score
-            current_box.name = best_element.name
-            results[i] = best_element
-            self.draw_boxes(boxes=current_box, color="red")
-            self.log_debug(
-                f"char_{i + 1} identified as {best_element.name} (score: {max_score:.4f})"
-            )
-
-        return results
 
     def is_cycle_full(self) -> bool:
         img = self.box_of_screen_scaled(

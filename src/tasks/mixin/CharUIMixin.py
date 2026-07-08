@@ -1,42 +1,34 @@
 import time
 from dataclasses import dataclass
+from threading import Lock, Thread
 
 import cv2
 import numpy as np
-from ok import BaseTask, Box
+from ok import BaseTask, Box, Logger, get_path_relative_to_exe
 
+from src.char.BaseChar import Element
 from src.Labels import Labels
-from src.utils import game_filters as gf
 from src.utils import image_utils as iu
+from src.utils.current_char_detector import (
+    CurrentCharConfig,
+    CurrentCharDetection,
+    build_current_char_scores,
+    detect_current_char,
+    normalize_char_count,
+)
 
-
-@dataclass
-class _CurrentCharDetection:
-    index: int
-    score: float
-    scores: list[float]
-    accepted: bool
-    strong: bool
-    reason: str
-    raw_scores: list[float]
-    core_scores: list[float] | None
+logger = Logger.get_logger(__name__)
 
 
 @dataclass(frozen=True)
-class _CurrentCharConfig:
-    reject_score: float = 0.75
-    accept_score: float = 0.45
-    raw_candidate_score: float = 0.85
-    raw_candidate_margin: float = 0.06
-    raw_strong_score: float = 0.45
-    raw_strong_margin: float = 0.15
-    core_strong_score: float = 0.70
-    core_strong_margin: float = 0.08
-    sticky_seconds: float = 0.8
+class ElementTemplate:
+    image: np.ndarray
+    mask: np.ndarray
+    color_signature: tuple[float, float, float] | None
 
 
 class CharUIMixin(BaseTask):
-    _CURRENT_CHAR = _CurrentCharConfig()
+    _CURRENT_CHAR = CurrentCharConfig()
 
     def _init_char_ui_state(self):
         self._char_ui_offset = False
@@ -73,164 +65,62 @@ class CharUIMixin(BaseTask):
     def get_box_by_char_spacing(self, box: Box, index: int):
         return box.copy(y_offset=index * self._char_vertical_spacing, name=f"{box.name}_{index}")
 
-    def _get_char_template_data(self):
+    def _get_current_char_template(self):
         if (
             not hasattr(self, "_char_template_cache")
             or self._char_template_cache.get("width") != self.width
             or self._char_template_cache.get("height") != self.height
         ):
             feature = self.get_feature_by_name(Labels.is_current_char)
-            mat: np.ndarray = feature.mat
-            if len(mat.shape) == 3 and mat.shape[2] != 2:
-                mat = gf.current_char_filter(mat)
             self._char_template_cache = {
                 "width": self.width,
                 "height": self.height,
-                "mat": mat,
+                "mat": feature.mat,
             }
 
         return self._char_template_cache["mat"]
 
-    def _match_current_char_feature(self, current_mat: np.ndarray, template_mat: np.ndarray):
-        th, tw = template_mat.shape[:2]
-        ch, cw = current_mat.shape[:2]
-        if ch < th or cw < tw:
-            return 1.0
-
-        result = cv2.matchTemplate(current_mat, template_mat, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, _ = cv2.minMaxLoc(result)
-        if np.isnan(max_val):
-            return 1.0
-        return 1.0 - max_val
-
-    def _get_current_char_core_scores(self, frame, template_mat, base_box):
-        """Match the stable inner part of the current-character marker."""
-        tpl_x, tpl_y, width, height = 6, 3, 20, 21
-        frame_x, frame_y = 15, 3
-
-        template_slice = template_mat[tpl_y : tpl_y + height, tpl_x : tpl_x + width]
-        if template_slice.shape[0] < 8 or template_slice.shape[1] < 12:
-            return None
-
-        scores = []
-        for i in range(4):
-            box = self.get_box_by_char_spacing(base_box, i)
-            current_mat = gf.current_char_filter(box.crop_frame(frame))
-            marker_slice = current_mat[
-                frame_y : frame_y + height,
-                frame_x : frame_x + width,
-            ]
-            scores.append(self._match_current_char_feature(marker_slice, template_slice))
-        return scores
-
     def _build_current_char_scores(self, index, score, accepted):
-        scores = [self._CURRENT_CHAR.reject_score] * 4
-        if accepted and 0 <= index < len(scores):
-            scores[index] = min(score, self._CURRENT_CHAR.accept_score)
-        return scores
-
-    def _rank_current_char_scores(self, scores):
-        if not scores:
-            return -1, 1.0, 0.0
-        best_idx = int(np.argmin(scores))
-        ordered_scores = sorted(scores)
-        best_score = ordered_scores[0]
-        second_score = ordered_scores[1] if len(ordered_scores) > 1 else 1.0
-        return best_idx, best_score, second_score - best_score
+        return build_current_char_scores(index, score, accepted, config=self._CURRENT_CHAR)
 
     def _get_current_char_boxes(self):
         base_box = self.get_box_by_name(Labels.is_current_char)
         base_box = self._shift_char_ui_box(base_box, expend=True)
         return base_box, [self.get_box_by_char_spacing(base_box, i) for i in range(4)]
 
-    def _detect_current_char_once(self, frame=None):
+    def _detect_current_char_once(self, frame=None, char_count=None):
+        candidate_count = normalize_char_count(char_count)
         if frame is None:
             frame = self.frame
-        if frame is None:
-            return _CurrentCharDetection(
+        if frame is None or candidate_count <= 0:
+            return CurrentCharDetection(
                 index=-1,
                 score=1.0,
                 scores=[self._CURRENT_CHAR.reject_score] * 4,
                 accepted=False,
                 strong=False,
-                reason="empty_frame",
-                raw_scores=[1.0] * 4,
-                core_scores=None,
+                reason="empty_frame" if frame is None else "empty_char_count",
+                active_scores=[0.0] * 4,
             )
 
-        template_mat = self._get_char_template_data()
-        base_box, boxes = self._get_current_char_boxes()
-        raw_scores = []
-        for box in boxes:
-            current_mat = gf.current_char_filter(box.crop_frame(frame))
-            raw_scores.append(self._match_current_char_feature(current_mat, template_mat))
-
-        raw_idx, raw_score, raw_margin = self._rank_current_char_scores(raw_scores)
-        core_scores = self._get_current_char_core_scores(frame, template_mat, base_box)
-        core_idx, core_score, core_margin = self._rank_current_char_scores(core_scores or [])
-
-        index = raw_idx
-        score = 1.0
-        accepted = False
-        strong = False
-        reason = "rejected"
-
-        raw_candidate = (
-            raw_score <= self._CURRENT_CHAR.raw_candidate_score
-            and raw_margin >= self._CURRENT_CHAR.raw_candidate_margin
-        )
-        raw_strong = (
-            raw_score <= self._CURRENT_CHAR.raw_strong_score
-            and raw_margin >= self._CURRENT_CHAR.raw_strong_margin
-        )
-        core_strong = (
-            core_scores is not None
-            and core_score <= self._CURRENT_CHAR.core_strong_score
-            and core_margin >= self._CURRENT_CHAR.core_strong_margin
+        _, boxes = self._get_current_char_boxes()
+        slot_images = [box.crop_frame(frame) for box in boxes[:candidate_count]]
+        detection = detect_current_char(
+            slot_images=slot_images,
+            template_mat=self._get_current_char_template(),
+            char_count=candidate_count,
+            config=self._CURRENT_CHAR,
         )
 
-        if core_scores is not None and raw_idx == core_idx and raw_candidate:
-            index = raw_idx
-            score = max(0.0, min(raw_score, core_score) - min(raw_margin, core_margin))
-            accepted = True
-            strong = True
-            reason = "raw_core_agree"
-        elif core_strong:
-            raw_support = (
-                raw_scores[core_idx] <= self._CURRENT_CHAR.raw_candidate_score
-                or raw_scores[core_idx] <= raw_score + 0.20
-            )
-            if raw_support:
-                index = core_idx
-                score = max(0.0, core_score - core_margin)
-                accepted = True
-                strong = core_margin >= self._CURRENT_CHAR.raw_candidate_margin
-                reason = "core_strong"
-        elif raw_strong:
-            index = raw_idx
-            score = max(0.0, raw_score - min(raw_margin, self._CURRENT_CHAR.raw_strong_margin))
-            accepted = True
-            strong = True
-            reason = "raw_strong"
+        if 0 <= detection.index < len(boxes):
+            self.draw_boxes(boxes=boxes[detection.index], color="red")
 
-        scores = self._build_current_char_scores(index, score, accepted)
-        if 0 <= index < len(boxes):
-            self.draw_boxes(boxes=boxes[index], color="red")
+        return detection
 
-        return _CurrentCharDetection(
-            index=index if accepted else -1,
-            score=score if accepted else 1.0,
-            scores=scores,
-            accepted=accepted,
-            strong=strong,
-            reason=reason,
-            raw_scores=raw_scores,
-            core_scores=core_scores,
-        )
-
-    def _apply_current_char_tracker(self, detection: _CurrentCharDetection):
+    def _apply_current_char_tracker(self, detection: CurrentCharDetection, char_count=None):
         now = time.time()
         tracker = self._current_char_tracker
+        candidate_count = normalize_char_count(char_count)
         if detection.accepted:
             tracker["index"] = detection.index
             tracker["score"] = detection.score
@@ -238,36 +128,39 @@ class CharUIMixin(BaseTask):
             tracker["reason"] = detection.reason
             return detection
 
-        if tracker["index"] != -1 and now - tracker["time"] <= self._CURRENT_CHAR.sticky_seconds:
+        if (
+            tracker["index"] != -1
+            and tracker["index"] < candidate_count
+            and now - tracker["time"] <= self._CURRENT_CHAR.sticky_seconds
+        ):
             index = tracker["index"]
             score = max(tracker["score"], self._CURRENT_CHAR.accept_score)
             scores = self._build_current_char_scores(index, score, accepted=True)
-            return _CurrentCharDetection(
+            return CurrentCharDetection(
                 index=index,
                 score=scores[index],
                 scores=scores,
                 accepted=True,
                 strong=False,
                 reason=f"sticky:{tracker['reason']}",
-                raw_scores=detection.raw_scores,
-                core_scores=detection.core_scores,
+                active_scores=detection.active_scores,
             )
 
         return detection
 
-    def _get_current_char_detection(self, frame=None):
-        detection = self._detect_current_char_once(frame=frame)
+    def _get_current_char_detection(self, frame=None, char_count=None):
+        detection = self._detect_current_char_once(frame=frame, char_count=char_count)
         if frame is None:
-            return self._apply_current_char_tracker(detection)
+            return self._apply_current_char_tracker(detection, char_count=char_count)
         return detection
 
-    def _get_char_match_scores(self, frame=None):
+    def _get_char_match_scores(self, frame=None, char_count=None):
         """Return four slot scores; lower means the slot is the current char."""
-        return self._get_current_char_detection(frame=frame).scores
+        return self._get_current_char_detection(frame=frame, char_count=char_count).scores
 
-    def get_current_char_index(self):
+    def get_current_char_index(self, char_count=None):
         # frame = self.frame
-        detection = self._get_current_char_detection()
+        detection = self._get_current_char_detection(char_count=char_count)
         if detection.accepted:
             self.log_debug(
                 f"current_char found at {detection.index} "
@@ -278,8 +171,7 @@ class CharUIMixin(BaseTask):
             return detection.index
 
         self.log_debug(
-            f"current_char rejected ({detection.reason}) raw={detection.raw_scores} "
-            f"core={detection.core_scores}"
+            f"current_char rejected ({detection.reason}) active={detection.active_scores}"
         )
         return -1
 
@@ -323,3 +215,218 @@ class CharUIMixin(BaseTask):
             self._char_ui_offset = False
         # logger.debug(f"update_char_ui_offset cost {time.time() - now:.3f}")
         return arr
+
+
+class CharElementUIMixin(BaseTask):
+    _element_template_cache = {}
+    _element_template_cache_lock = Lock()
+    _element_template_preheat_started = False
+    _element_match_weight = 0.6
+    _element_color_weight = 0.4
+    _element_min_score = 0.45
+
+    @staticmethod
+    def _process_template_transparency(img):
+        if img is None:
+            return None
+        if len(img.shape) == 2:
+            return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        if img.shape[2] == 4:
+            b, g, r, a = cv2.split(img)
+            black_bg = np.zeros_like(img[:, :, :3])
+            alpha_factor = a.astype(float) / 255.0
+            alpha_factor = cv2.merge([alpha_factor, alpha_factor, alpha_factor])
+
+            foreground = cv2.merge([b, g, r]).astype(float)
+            background = black_bg.astype(float)
+
+            final_img = cv2.add(
+                cv2.multiply(foreground, alpha_factor),
+                cv2.multiply(background, 1.0 - alpha_factor),
+            )
+            return final_img.astype(np.uint8)
+        return img
+
+    @staticmethod
+    def _preprocess_element_template_image(image):
+        return iu.binarize_bgr_by_adaptive_center(image)
+
+    @staticmethod
+    def _get_element_color_signature(image):
+        if image is None or image.size == 0:
+            return None
+
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        value = hsv[:, :, 2]
+        visible = value > 25
+        if not np.any(visible):
+            return None
+
+        visible_values = value[visible]
+        threshold = max(45, float(np.percentile(visible_values, 70)))
+        foreground = visible & (value >= threshold)
+        min_pixels = max(12, int(image.shape[0] * image.shape[1] * 0.03))
+        if np.count_nonzero(foreground) < min_pixels:
+            threshold = max(35, float(np.percentile(visible_values, 55)))
+            foreground = visible & (value >= threshold)
+        if np.count_nonzero(foreground) < min_pixels:
+            foreground = visible
+
+        samples = hsv[foreground].astype(np.float32)
+        return tuple(float(v) for v in np.median(samples, axis=0))
+
+    @staticmethod
+    def _element_color_similarity(signature, template_signature):
+        if signature is None or template_signature is None:
+            return 0.0
+
+        hue_delta = abs(signature[0] - template_signature[0])
+        hue_delta = min(hue_delta, 180 - hue_delta) / 90
+        saturation_delta = abs(signature[1] - template_signature[1]) / 255
+        value_delta = abs(signature[2] - template_signature[2]) / 255
+        if signature[1] < 80 or template_signature[1] < 80:
+            distance = hue_delta * 0.1 + saturation_delta * 0.85 + value_delta * 0.05
+        else:
+            distance = hue_delta * 0.45 + saturation_delta * 0.45 + value_delta * 0.1
+        return max(0.0, 1.0 - min(distance, 1.0))
+
+    @classmethod
+    def _load_element_template(cls, element):
+        path = get_path_relative_to_exe("assets", "esper_icons", f"{element.value}.png")
+        raw_template = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        if raw_template is None:
+            return None
+
+        h, w = raw_template.shape[:2]
+        raw_template = cls._process_template_transparency(raw_template)
+        if raw_template is None:
+            return None
+
+        element_scale = 0.5
+        raw_template = cv2.resize(
+            raw_template,
+            (int(w * element_scale), int(h * element_scale)),
+            interpolation=cv2.INTER_NEAREST,
+        )
+        template_bin = cls._preprocess_element_template_image(raw_template)
+        _, mask = cv2.threshold(template_bin, 127, 255, cv2.THRESH_BINARY)
+        kernel = np.ones((30, 30), np.uint8)
+        mask = cv2.dilate(mask, kernel, iterations=1)
+        return ElementTemplate(
+            image=raw_template,
+            mask=mask,
+            color_signature=cls._get_element_color_signature(raw_template),
+        )
+
+    @classmethod
+    def build_element_template_cache(cls):
+        with cls._element_template_cache_lock:
+            if cls._element_template_cache:
+                return
+
+        built_cache = {}
+        for element in cls.element_ring:
+            template_data = cls._load_element_template(element)
+            if template_data is not None:
+                built_cache[element] = template_data
+
+        with cls._element_template_cache_lock:
+            if not cls._element_template_cache:
+                cls._element_template_cache = built_cache
+
+    @classmethod
+    def _preheat_element_template_cache_worker(cls):
+        try:
+            cls.build_element_template_cache()
+            logger.debug(f"preheated {len(cls._element_template_cache)} element templates")
+        except Exception as e:
+            logger.error("Failed to preheat element templates", e)
+
+    @classmethod
+    def preheat_element_template_cache_async(cls):
+        with cls._element_template_cache_lock:
+            if cls._element_template_preheat_started or cls._element_template_cache:
+                return
+            cls._element_template_preheat_started = True
+        Thread(
+            target=cls._preheat_element_template_cache_worker,
+            name="element-template-cache-preheat",
+            daemon=True,
+        ).start()
+
+    def load_chars_element(self, indices: list[int]) -> dict:
+        results = {}
+        self.build_element_template_cache()
+
+        base_box = self.get_base_char_element_box()
+
+        _frame = self.frame
+        # self.screenshot("load_chars_element", _frame)
+
+        for i in indices:
+            base_scale = 8
+            scale = base_scale * 1440 / self.height
+            current_box = self.get_box_by_char_spacing(base_box, i)
+            crop_img = current_box.crop_frame(_frame)
+            crop_h, crop_w = crop_img.shape[:2]
+            crop_resized = cv2.resize(
+                crop_img,
+                (int(crop_w * scale), int(crop_h * scale)),
+                interpolation=cv2.INTER_NEAREST,
+            )
+            crop_color_signature = self._get_element_color_signature(crop_resized)
+            # iu.show_images([crop_resized, crop_img], [f"crop_resized_{i}", f"crop_img_{i}"])
+
+            best_element = Element.DEFAULT
+            max_score = -1.0
+            best_template_score = 0.0
+            best_color_score = 0.0
+
+            for element in self.element_ring:
+                template_data = self._element_template_cache.get(element)
+                if template_data is None:
+                    continue
+                template_img = template_data.image
+                template_mask = template_data.mask
+
+                match_score = 0
+                color_score = 0.0
+                if (
+                    crop_resized is not None
+                    and template_img is not None
+                    and crop_resized.shape[0] >= template_img.shape[0]
+                    and crop_resized.shape[1] >= template_img.shape[1]
+                ):
+                    res = cv2.matchTemplate(
+                        crop_resized, template_img, cv2.TM_CCOEFF_NORMED, mask=template_mask
+                    )
+                    np.nan_to_num(res, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+                    _, match_score, _, _ = cv2.minMaxLoc(res)
+                    color_score = self._element_color_similarity(
+                        crop_color_signature, template_data.color_signature
+                    )
+
+                combined_score = (
+                    match_score * self._element_match_weight
+                    + color_score * self._element_color_weight
+                )
+                if combined_score > max_score:
+                    max_score = combined_score
+                    best_template_score = match_score
+                    best_color_score = color_score
+                    best_element = element
+
+            if max_score < self._element_min_score:
+                best_element = Element.DEFAULT
+
+            current_box.confidence = max_score
+            current_box.name = f"char_{i}_" + best_element.name
+            results[i] = best_element
+            self.draw_boxes(boxes=current_box, color="red")
+            self.log_debug(
+                f"char_{i + 1} identified as {best_element.name} "
+                f"(score: {max_score:.4f}, template: {best_template_score:.4f}, "
+                f"color: {best_color_score:.4f})"
+            )
+
+        return results

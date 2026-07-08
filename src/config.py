@@ -5,13 +5,14 @@ import os
 from ok import Box, ConfigOption
 
 from src import GAME_EXE
+from src.audio_routing import create_background_audio_routing_config_option
 from src.interaction.NTEInteraction import NTEInteraction
 from src.process_feature import process_feature
 
 if "PATH" not in os.environ:
     os.environ["PATH"] = ""
 
-version = "v1.1.32"
+version = "v1.2.8"
 # 不需要修改version, Github Action打包会自动修改
 
 key_config_option = ConfigOption(
@@ -58,6 +59,8 @@ sound_trigger_config_option = ConfigOption(
     },
 )
 
+background_audio_routing_config_option = create_background_audio_routing_config_option()
+
 
 def blur_area(width, height):
     return Box(width * 0, height * 0.9769, to_x=width * 0.0943, to_y=height * 1)
@@ -68,7 +71,12 @@ config = {
     "debug": False,  # Optional, default: False
     "use_gui": True,  # 目前只支持True
     "config_folder": "configs",  # 最好不要修改
-    "global_configs": [key_config_option, monthly_card_config_option, sound_trigger_config_option],
+    "global_configs": [
+        key_config_option,
+        monthly_card_config_option,
+        sound_trigger_config_option,
+        background_audio_routing_config_option,
+    ],
     # "screenshot_processor": make_bottom_left_black,  # 在截图的时候对frame进行修改, 可选
     "blur_area": blur_area,
     "gui_icon": "icons/icon.png",  # 窗口图标, 最好不需要修改文件名
@@ -183,6 +191,7 @@ config = {
         ["src.tasks.DarkTask", "DarkTask"],
         ["src.tasks.BagelAITools", "BagelAITools"],
         ["src.tasks.WhirlwindTask", "WhirlwindTask"],
+        ["src.tasks.DSDFarmTask", "DSDFarmTask"],
         ["ok", "DiagnosisTask"],
         # ["src.tasks.custom.TeamScannerTask", "TeamScannerTask"],
         # ["src.tasks.DebugCharTask", "DebugCharTask"],
@@ -203,7 +212,7 @@ config = {
     "scene": ["src.scene.NTEScene", "NTEScene"],
     "update_pyappify": {
         "to_version": "1.1.6",
-        "zip_url": "https://github.com/BnanZ0/ok-nte/releases/download/v0.0.61/ok-nte-win32.zip",
-        "sha256": "9903dca9eb7ddf4c5db9769cc96d51ba1eab04b43bec4b17e60aad7d44731b53",
+        "zip_url": "https://github.com/BnanZ0/ok-nte/releases/download/v1.1.32/ok-nte-win32.zip",
+        "sha256": "3525566f5eee67243339614139dfde52f57c9e592e90bf66b141a54c04942f89",
     },
 }

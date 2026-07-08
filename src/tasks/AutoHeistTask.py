@@ -122,7 +122,6 @@ EN_INST = "<br>".join(
 
 
 class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
-    CONF_LOOP_COUNT = "循环次数"
     CONF_PATH = "路径"
     CONF_FIGHTER = "战斗角色"
     CONF_RUNNER = "跑图角色"
@@ -153,9 +152,9 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         }
         path_names = list(self.paths.keys())
         self.avoid_methods = [self.AVOID_METHOD_DASH, self.AVOID_METHOD_ATTACK]
+        self.add_rounds_config()
         self.default_config.update(
             {
-                self.CONF_LOOP_COUNT: 0,
                 self.CONF_PATH: path_names[0],
                 self.CONF_FIGHTER: ["4", "1"],
                 self.CONF_RUNNER: ["3"],
@@ -165,7 +164,6 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         )
         self.config_description.update(
             {
-                self.CONF_LOOP_COUNT: "循环次数, 设置为0则一直运行",
                 self.CONF_PATH: "使用任何路径前请先阅读使用说明",
                 self.CONF_FIGHTER: "选1~2个",
                 self.CONF_RUNNER: "选1个",
@@ -225,17 +223,16 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         self.info_set("总粉爪币获取数", 0)
 
         count = 0
+        total = self.configured_rounds(default=0)
 
-        total = int(self.config.get(self.CONF_LOOP_COUNT, 1))
-        endless = total == 0
-        while endless or count < total:
+        while self.should_run_round(count + 1, total):
             self.ensure_main()
             if not self._ensure_heist_entrance():
                 self.next_frame()
                 continue
 
             count += 1
-            self._prepare_round(count, total, endless)
+            self._prepare_round(count, total)
 
             self._run_heist_round()
 
@@ -264,11 +261,10 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         self.log_info("quick_pick_loop start")
         self.submit_periodic_task(0.01, self._quick_pick_loop)
 
-    def _prepare_round(self, count, total, endless):
+    def _prepare_round(self, count, total):
         self._dead_fighter_keys = []
         self._round_label = f"第 {count} 轮"
-        round_text = "∞" if endless else f"{total}"
-        self.info_set("轮次", f"{count} / {round_text}")
+        self.info_set("轮次", self.rounds_info_text(count, total))
 
     def _add_rewards_to_summary(self, earnfcash, earnpcoin):
         self.info_add("成功次数", 1)
@@ -587,7 +583,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             action=lambda: self.operate_click(0.604, 0.701, interval=1),
             range=(0.5359, 0.8139, 0.5852, 0.9062),
             time_out=20,
-            raise_if_not_found=False
+            raise_if_not_found=False,
         ):
             self.log_round_info("点击撤离超时")
             self.abort_heist()
@@ -920,15 +916,11 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
     def is_lock_pick_active(self):
         """检查撬锁转盘 UI 是否正在显示。"""
         box = self.get_box_by_name(Labels.heist_lock_pick).scale(1.5)
-        self.draw_boxes(boxes=box, color="blue")
-        cropped = box.crop_frame(self.frame)
-        cropped = iu.create_color_mask(cropped, text_white_color)
-        # feature = self.get_feature_by_name(Labels.heist_lock_pick).mat
-        # iu.show_images([feature, cropped], ["feature", "cropped"])
-        res, _ = self._find_rotated_template(
+        res, _ = self.find_rotated_template(
             Labels.heist_lock_pick,
-            cropped,
+            box=box,
             threshold=self.LOCK_PICK_MATCH_THRESHOLD,
+            frame_processor=lambda cropped: iu.create_color_mask(cropped, text_white_color),
         )
         return len(res) >= 1
 

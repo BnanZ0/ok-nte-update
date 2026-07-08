@@ -106,8 +106,8 @@ msgstr "Salvo com sucesso"
 msgid "停用"
 msgstr "Desativar"
 
-msgid "先扫描或手动填写"
-msgstr "Escanear primeiro ou preencher manualmente"
+msgid "先扫描并关联特征或手动填写"
+msgstr "Escanear e vincular características primeiro, ou preencher manualmente"
 
 msgid "出招表"
 msgstr "Lista de Combos"
@@ -162,15 +162,8 @@ msgstr "Clique automático em teletransporte no mapa"
 msgid "填入扫描"
 msgstr "Preencher Escaneamento"
 
-msgid ""
-"关联 <b style=\"color: #0078d7;\">角色特征</b> 后将自动判断当前角色。<br>如果不想管理 <b "
-"style=\"color: #0078d7;\">角色特征</b>，可以直接启用 <b style=\"color: "
-"#0078d7;\">{fixed_team}</b> 功能。"
-msgstr ""
-"Vincular <b style=\"color: #0078d7;\">Características do Personagem</b> "
-"identificará automaticamente o personagem atual.<br>Se não quiser gerenciar "
-"as <b style=\"color: #0078d7;\">Características do Personagem</b>, ative "
-"diretamente a função <b style=\"color: #0078d7;\">{fixed_team}</b>."
+msgid "这是个用于向数据库关联或添加 <b style=\"color: #0078d7;\">角色特征</b> 的工具面板。<br>点击 <b style=\"color: #0078d7;\">{scan_team}</b> 后点击 <b style=\"color: #0078d7;\">关联或添加</b> 特征，自动战斗时就会识别对应的角色。<br><b style=\"color: #d83b01;\">💡 注意：</b>此面板 <b style=\"color: #d83b01;\">不会</b> 在进入战斗或更换阵容时实时自动刷新或同步显示, 因为这是工具面板。<br>如果不想管理 <b style=\"color: #0078d7;\">角色特征</b>，可以直接使用 <b style=\"color: #0078d7;\">{fixed_team}</b> 功能。"
+msgstr "Este é um painel de ferramentas para vincular ou adicionar <b style=\"color: #0078d7;\">Características do Personagem</b> ao banco de dados.<br>Clique em <b style=\"color: #0078d7;\">{scan_team}</b> e depois clique em <b style=\"color: #0078d7;\">Vincular ou Adicionar</b> característica, e o personagem correspondente será identificado durante o combate automático.<br><b style=\"color: #d83b01;\">💡 Nota:</b> Este painel <b style=\"color: #d83b01;\">não será atualizado</b> ou sincronizado automaticamente em tempo real ao entrar em combate ou alterar a composição da equipe, pois este é um painel de ferramentas.<br>Se não quiser gerenciar as <b style=\"color: #0078d7;\">Características do Personagem</b>, pode usar diretamente a função <b style=\"color: #0078d7;\">{fixed_team}</b>."
 
 msgid "完成每日活跃度"
 msgstr "Completar Atividade Diária"
@@ -771,3 +764,75 @@ msgstr "Fazer login novamente a cada 2 horas"
 
 msgid "除了选择内建存在的<b style=\"color: #0078d7;\">{combo}</b>外，您也可以自己输入名称来建立自己的<b style=\"color: #0078d7;\">{combo}</b>。"
 msgstr "Além de selecionar um <b style=\"color: #0078d7;\">{combo}</b> integrado, você também pode inserir um nome para criar seu próprio <b style=\"color: #0078d7;\">{combo}</b>."
+
+msgid "九百九十九夜"
+msgstr "999 Nights"
+
+msgid "巧克力火山-底层最左边的篝火"
+msgstr "Vulcão de Chocolate - Fogueira da extrema esquerda do andar inferior"
+
+msgid "挂机刷经验"
+msgstr "Farm de EXP AFK"
+
+msgid "位置"
+msgstr "Localização"
+
+msgid "赤龙古堡-龙之高塔室外篝火"
+msgstr "Castelo do Dragão Vermelho - Fogueira externa da Torre do Dragão"
+
+msgid "使用终结技"
+msgstr "Usar Ultimate"
+
+msgid "设置为0则一直运行"
+msgstr "Definir como 0 para executar indefinidamente"
+
+msgid "Background Audio Routing"
+msgstr "Roteamento de áudio em segundo plano"
+
+msgid "Enable Background Audio Routing"
+msgstr "Habilitar roteamento de áudio em segundo plano"
+
+msgid "SoundVolumeCommandLine Path"
+msgstr "Caminho do SoundVolumeCommandLine"
+
+msgid "Background Output Device"
+msgstr "Dispositivo de saída em segundo plano"
+
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "Abrir página de descarga do SoundVolumeCommandLine"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "Opcionalmente, roteia o áudio do jogo para um dispositivo de saída do Windows selecionado enquanto estiver em segundo plano. O SoundVolumeCommandLine não está incluído; selecione sua própria cópia baixada."
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "Alternar a saída de áudio do jogo quando a janela do jogo sair do primeiro plano"
+
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "Selecionar o svcl.exe baixado do NirSoft"
+
+msgid "Output device used while the game is in the background"
+msgstr "Dispositivo de saída usado enquanto o jogo está em segundo plano"
+
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "Abrir a página oficial do NirSoft SoundVolumeCommandLine"
+
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;Arquivos executáveis (*.exe);;Todos os arquivos (*)"
+
+msgid "Select svcl.exe"
+msgstr "Selecionar svcl.exe"
+
+msgid "Open Download Page"
+msgstr "Abrir página de download"
+
+msgid "⚠️ 正在运行{rob_mode}\n该模式会高频占用/争夺鼠标。如需停止，请使用热键暂停 ok-nte, 再手动停止任务。\n当前热键: {hotkey} (如无法确认当前热键则点击取消, 主动确认后再运行)"
+msgstr "⚠️ Executando {rob_mode}\nEste modo ocupará/disputará o mouse em alta frequência. Para parar, use a tecla de atalho para pausar o ok-nte e depois pare a tarefa manualmente.\nTecla de atalho atual: {hotkey} (se não puder confirmar a tecla de atalho atual, clique em cancelar e execute após confirmar manualmente)"
+
+msgid "赤龙古堡-残丝长巷篝火"
+msgstr "Castelo do Dragão Vermelho - Fogueira do Beco da Seda"
+
+msgid "战斗时长上限"
+msgstr "Duração máxima do combate"
+
+msgid "战斗时不切人"
+msgstr "Não trocar de personagem durante o combate"

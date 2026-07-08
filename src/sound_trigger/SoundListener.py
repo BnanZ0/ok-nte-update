@@ -18,6 +18,7 @@ from scipy.signal import butter, correlate, filtfilt
 
 from src.sound_trigger.capture import MODE_PROCESS, AudioCaptureSource, create_capture_source
 from src.sound_trigger.capture.base import CAPTURE_SAMPLE_RATE
+from src.utils.log_gate import LogGate
 
 warnings.filterwarnings("ignore", message="data discontinuity in recording")
 
@@ -69,6 +70,7 @@ class SoundListener:
         self.on_dodge_triggered = None
         self.on_counter_triggered = None
         self._capture: Optional[AudioCaptureSource] = None
+        self._log_gate = LogGate(logger)
 
         self._load_samples()
 
@@ -110,6 +112,8 @@ class SoundListener:
         if os.path.exists(cache_path) and os.path.exists(path):
             if os.path.getmtime(cache_path) > os.path.getmtime(path):
                 return np.load(cache_path)
+        if not os.path.exists(path):
+            raise FileNotFoundError(path)
 
         waveform, _ = librosa.load(path, sr=self.used_sr)
         waveform = self._filtering(waveform)
@@ -237,7 +241,6 @@ class SoundListener:
     def _listen_once(self, stop_event: threading.Event):
         logger.info(f"Initializing WASAPI process audio capture for {self.process_name}...")
 
-        last_log = 0
         max_samples = int(self.used_sr * self.sample_len)
         samples_per_check = max(1, int(self.used_sr * self.detection_interval))
         ring_buffer = np.zeros(max_samples * 2, dtype=np.float64)
@@ -318,18 +321,17 @@ class SoundListener:
 
             # self._draw_debug_visual(dodge_score, counter_score)
 
-            now = time.time()
-            if now - last_log > self.log_interval:
-                last_log = now
-                logger.info(
-                    "Audio monitoring - dodge_score: {:.4f} (threshold: {}), "
-                    "counter_score: {:.4f} (threshold: {})".format(
-                        dodge_score,
-                        self.threshold,
-                        counter_score,
-                        self.counter_attack_threshold,
-                    )
-                )
+            self._log_gate.info(
+                "Audio monitoring - dodge_score: {:.4f} (threshold: {}), "
+                "counter_score: {:.4f} (threshold: {})".format(
+                    dodge_score,
+                    self.threshold,
+                    counter_score,
+                    self.counter_attack_threshold,
+                ),
+                interval=self.log_interval,
+                key="audio_monitoring",
+            )
 
     def _check_triggers(self, dodge_score, counter_score):
         now = time.time()
