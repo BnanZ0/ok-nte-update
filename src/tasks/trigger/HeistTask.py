@@ -395,6 +395,8 @@ class HeistTask(BaseNTETask, TriggerTask):
             self.physical_keys_pressed.add(data.vkCode)
         elif msg in self.KEY_UP_MESSAGES:
             self.physical_keys_pressed.discard(data.vkCode)
+            if data.vkCode in self.SHIFT_KEYS and not self._is_key_pressed("shift"):
+                self._reset_quick_run()
 
         listener = self.listener
         if listener is not None and self._should_suppress(msg, data.vkCode):

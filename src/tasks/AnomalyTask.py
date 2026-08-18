@@ -19,6 +19,7 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
     CONF_CONSOLE_ID = "空幕序号"
     CONF_CYCLEB_TASK_MODE = "循环模式"
     CONF_CUSTOM_CYCLE = "循环序列"
+    CONF_STAMINA_TARGET = "目标消耗体力"
 
     # --- 循环模式 ---
     CYCLE_NONE = "停用"
@@ -99,16 +100,29 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
         """
         初始化配置。支持传入外部实例(如 DailyTask)来同步配置项。
         """
-        config_updates = {
-            cls.CONF_TASK_TYPE: cls.TASK_EXP_COIN,
-            cls.CONF_EXP_TARGET: cls.EXP_CHAR,
-            cls.CONF_ABILITY_ID: 1,
-            cls.CONF_ARC_ID: 1,
-            cls.CONF_CONSOLE_ID: 1,
-            cls.CONF_CUSTOM_CYCLE: [],
-        }
+        config_updates = {}
         if daily:
-            config_updates[cls.CONF_CYCLEB_TASK_MODE] = cls.CYCLE_NONE
+            config_updates.update(
+                {
+                    cls.CONF_STAMINA_TARGET: 180,
+                }
+            )
+        config_updates.update(
+            {
+                cls.CONF_TASK_TYPE: cls.TASK_EXP_COIN,
+                cls.CONF_EXP_TARGET: cls.EXP_CHAR,
+                cls.CONF_ABILITY_ID: 1,
+                cls.CONF_ARC_ID: 1,
+                cls.CONF_CONSOLE_ID: 1,
+            }
+        )
+        if daily:
+            config_updates.update(
+                {
+                    cls.CONF_CYCLEB_TASK_MODE: cls.CYCLE_NONE,
+                    cls.CONF_CUSTOM_CYCLE: [],
+                }
+            )
         instance.default_config.update(config_updates)
 
         instance.config_type.update(
@@ -139,16 +153,16 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
                 },
             }
         )
-        description_update = {
-            cls.CONF_TASK_TYPE: "选择要进行的任务类型",
-            cls.CONF_EXP_TARGET: "选择经验与甲硬币任务的具体奖励目标",
-            cls.CONF_ABILITY_ID: cls.DESC_ID_RANGE_FMT.format(*cls.ABILITY_ID_RANGE),
-            cls.CONF_ARC_ID: cls.DESC_ID_RANGE_FMT.format(*cls.ARC_ID_RANGE),
-            cls.CONF_CONSOLE_ID: cls.DESC_ID_RANGE_FMT.format(*cls.CONSOLE_ID_RANGE),
-        }
-        if daily:
-            description_update[cls.CONF_CYCLEB_TASK_MODE] = "任务完成后自动切换至下一个项目"
-        instance.config_description.update(description_update)
+        instance.config_description.update(
+            {
+                cls.CONF_TASK_TYPE: "选择要进行的任务类型",
+                cls.CONF_EXP_TARGET: "选择经验与甲硬币任务的具体奖励目标",
+                cls.CONF_ABILITY_ID: cls.DESC_ID_RANGE_FMT.format(*cls.ABILITY_ID_RANGE),
+                cls.CONF_ARC_ID: cls.DESC_ID_RANGE_FMT.format(*cls.ARC_ID_RANGE),
+                cls.CONF_CONSOLE_ID: cls.DESC_ID_RANGE_FMT.format(*cls.CONSOLE_ID_RANGE),
+                cls.CONF_CYCLEB_TASK_MODE: "任务完成后自动切换至下一个项目",
+            }
+        )
         if not daily:
             instance.add_claim_reward_count_config()
 
@@ -161,9 +175,9 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
         except Exception as e:
             self.log_error("AnomalyTask Error", e)
 
-    def do_run(self, config=None, stamina_target=None):
-        if config is None:
-            config = self.config
+    def do_run(self) -> bool:
+        config = self.config
+        stamina_target = config.get(self.CONF_STAMINA_TARGET)
         task_type = config.get(self.CONF_TASK_TYPE)
         idx = self.get_sub_idx(config)
 
@@ -228,7 +242,7 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
         completed_count = 0
         while completed_count < total_count:
             double = completed_count < double_count
-            self.wait_until(lambda: self.find_one(Labels.in_domain), time_out=30)
+            self.wait_until(self.find_exit, time_out=30)
             self.wait_in_team()
             self.sleep(1)
             if not self.do_combat_and_claim(double):
@@ -270,14 +284,6 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
             time_out=10,
         )
 
-    def exit_anomaly(self):
-        self.wait_click_confirm(
-            lambda: self.send_key("esc", interval=2),
-            range=(0.619, 0.609, 0.709, 0.708),
-            settle_time=0.4,
-        )
-        self.wait_in_team_and_world()
-
     def do_combat_and_claim(self, double: bool):
         self.log_info("开始执行战斗流程")
         self.walk_until_combat(run=True, delay=1)
@@ -288,16 +294,9 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
         def action(count):
             self.walk_to_treasure()
             self.send_interac(handle_claim=False)
-            claims = self.find_all_claim()
-            self.log_info(f"发现 {len(claims)} 个领取奖励")
-            if not claims:
-                self.log_warning("未找到领取奖励按钮")
-                key = "a" if count % 2 else "d"
-                self.send_key(key, down_time=0.5, after_sleep=1)
-                self.next_frame()
-                return False
-            return claims
+            return self.find_all_claim()
 
+        self.rotate_and_find_treasure()
         claims = self.retry_on_action(action)
         if not claims:
             return False

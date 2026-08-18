@@ -110,7 +110,7 @@
         },
         {
             "id": 18,
-            "file_name": "images/10.png",
+            "file_name": "images/11.png",
             "width": 1920,
             "height": 1080
         },
@@ -176,37 +176,31 @@
         },
         {
             "id": 29,
-            "file_name": "images/11.png",
+            "file_name": "images/12.png",
             "width": 1600,
             "height": 900
         },
         {
             "id": 30,
-            "file_name": "images/8.png",
-            "width": 2560,
-            "height": 1440
-        },
-        {
-            "id": 31,
-            "file_name": "images/0.png",
+            "file_name": "images/10.png",
             "width": 2560,
             "height": 1440
         },
         {
             "id": 32,
-            "file_name": "images/1.png",
+            "file_name": "images/0.png",
             "width": 2560,
             "height": 1440
         },
         {
             "id": 33,
-            "file_name": "images/9.png",
+            "file_name": "images/8.png",
             "width": 2560,
             "height": 1440
         },
         {
             "id": 34,
-            "file_name": "images/0.png",
+            "file_name": "images/9.png",
             "width": 2560,
             "height": 1440
         },
@@ -218,6 +212,30 @@
         },
         {
             "id": 36,
+            "file_name": "images/0.png",
+            "width": 2560,
+            "height": 1440
+        },
+        {
+            "id": 38,
+            "file_name": "images/3.png",
+            "width": 2560,
+            "height": 1440
+        },
+        {
+            "id": 39,
+            "file_name": "images/4.png",
+            "width": 2560,
+            "height": 1440
+        },
+        {
+            "id": 40,
+            "file_name": "images/1.png",
+            "width": 2560,
+            "height": 1440
+        },
+        {
+            "id": 43,
             "file_name": "images/0.png",
             "width": 2560,
             "height": 1440
@@ -1007,7 +1025,7 @@
         {
             "id": 61,
             "image_id": 14,
-            "category_id": 42,
+            "category_id": 82,
             "bbox": [
                 26,
                 22,
@@ -1020,7 +1038,7 @@
         {
             "id": 62,
             "image_id": 28,
-            "category_id": 62,
+            "category_id": 84,
             "bbox": [
                 513,
                 339,
@@ -1084,15 +1102,15 @@
         },
         {
             "id": 67,
-            "image_id": 31,
-            "category_id": 64,
+            "image_id": 39,
+            "category_id": 71,
             "bbox": [
-                1322,
-                734,
-                165,
-                117
+                2186,
+                1257,
+                99,
+                77
             ],
-            "area": 19305,
+            "area": 7623,
             "iscrowd": 0
         },
         {
@@ -1124,10 +1142,10 @@
         {
             "id": 70,
             "image_id": 30,
-            "category_id": 71,
+            "category_id": 79,
             "bbox": [
-                1560,
-                950,
+                1331,
+                948,
                 147,
                 128
             ],
@@ -1236,6 +1254,71 @@
                 13
             ],
             "area": 416,
+            "iscrowd": 0
+        },
+        {
+            "id": 79,
+            "image_id": 38,
+            "category_id": 64,
+            "bbox": [
+                2364,
+                1255,
+                104,
+                90
+            ],
+            "area": 9360,
+            "iscrowd": 0
+        },
+        {
+            "id": 80,
+            "image_id": 38,
+            "category_id": 80,
+            "bbox": [
+                2181,
+                1259,
+                105,
+                75
+            ],
+            "area": 7875,
+            "iscrowd": 0
+        },
+        {
+            "id": 81,
+            "image_id": 40,
+            "category_id": 81,
+            "bbox": [
+                1103,
+                1085,
+                47,
+                48
+            ],
+            "area": 2256,
+            "iscrowd": 0
+        },
+        {
+            "id": 82,
+            "image_id": 34,
+            "category_id": 62,
+            "bbox": [
+                64,
+                27,
+                70,
+                77
+            ],
+            "area": 5390,
+            "iscrowd": 0
+        },
+        {
+            "id": 83,
+            "image_id": 43,
+            "category_id": 83,
+            "bbox": [
+                91,
+                1165,
+                65,
+                64
+            ],
+            "area": 4160,
             "iscrowd": 0
         }
     ],
@@ -1446,11 +1529,6 @@
             "supercategory": ""
         },
         {
-            "id": 42,
-            "name": "in_domain",
-            "supercategory": ""
-        },
-        {
             "id": 43,
             "name": "launcher_start_game",
             "supercategory": ""
@@ -1547,7 +1625,7 @@
         },
         {
             "id": 62,
-            "name": "heist_exit",
+            "name": "exit_2",
             "supercategory": ""
         },
         {
@@ -1557,7 +1635,7 @@
         },
         {
             "id": 64,
-            "name": "anomaly_wooden_crate",
+            "name": "zankou_ult_purple",
             "supercategory": ""
         },
         {
@@ -1592,7 +1670,7 @@
         },
         {
             "id": 71,
-            "name": "anomaly_hamster_ball",
+            "name": "zankou_skill_gold",
             "supercategory": ""
         },
         {
@@ -1628,6 +1706,36 @@
         {
             "id": 78,
             "name": "icecar_lights",
+            "supercategory": ""
+        },
+        {
+            "id": 79,
+            "name": "anomaly_mammon",
+            "supercategory": ""
+        },
+        {
+            "id": 80,
+            "name": "zankou_skill_purple",
+            "supercategory": ""
+        },
+        {
+            "id": 81,
+            "name": "no_remind_today",
+            "supercategory": ""
+        },
+        {
+            "id": 82,
+            "name": "exit_1",
+            "supercategory": ""
+        },
+        {
+            "id": 83,
+            "name": "volleyball_restart",
+            "supercategory": ""
+        },
+        {
+            "id": 84,
+            "name": "heist_exit_panel",
             "supercategory": ""
         }
     ]

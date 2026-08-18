@@ -1,4 +1,3 @@
-import time
 
 import cv2
 import numpy as np
@@ -14,6 +13,7 @@ from src.tasks.NTEOneTimeTask import NTEOneTimeTask
 class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
     # --- 配置项键名 ---
     CONF_HUNTER_TARGET = "追猎目标"
+    CONF_STAMINA_TARGET = "目标消耗体力"
 
     # --- 追猎目标选项 ---
     TARGET_SOUND_KING = "音霸魔王"
@@ -67,6 +67,12 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
     @classmethod
     def setup_config(cls, instance: "BaseNTETask", daily=False):
         """初始化异象追猎配置。"""
+        if daily:
+            instance.default_config.update(
+                {
+                    cls.CONF_STAMINA_TARGET: 180,
+                }
+            )
         instance.default_config.update(
             {
                 cls.CONF_HUNTER_TARGET: cls.TARGET_SOUND_KING,
@@ -93,10 +99,9 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
         except Exception as e:
             self.log_error("AnomalyHunter Error", e)
 
-    def do_run(self, config=None, stamina_target=None):
-        if config is None:
-            config = self.config
-
+    def do_run(self) -> bool:
+        config = self.config
+        stamina_target = config.get(self.CONF_STAMINA_TARGET)
         target = self.normalize_target(config.get(self.CONF_HUNTER_TARGET, self.TARGET_SOUND_KING))
         target_idx = self.get_target_idx(target)
         self.info_set("追猎目标", target)
@@ -146,17 +151,18 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
                 self.log_warning(
                     f"异象追猎连续失败 {consecutive_failures}/{self.MAX_CONSECUTIVE_FAILURES}"
                 )
-                if consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
-                    self.log_warning("连续失败已达上限，将传送最近的电话亭传送点", notify=True)
-                    break
 
-            self.sleep(2)
-            self.log_info("当前异象追猎任务完成！")
+            self.exit_anomaly()
+
+            if consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
+                self.log_warning("连续失败已达上限，将传送最近的电话亭传送点", notify=True)
+                break
 
         self.log_info("异象追猎任务完成，尝试传送到最近的电话亭")
-        self.sleep(1)
+        self.sleep(0.5)
         self.click_nearest_map_teleport()
-        self.sleep(2)
+        self.sleep(0.5)
+        self.ensure_main()
         self.log_warning(
             f"异象追猎执行结果: 成功次数: {success_count},"
             f"失败次数: {failed_count}，共计消耗体力: {success_count * self.TASK_COST}"
@@ -210,6 +216,7 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
         self.sleep(0.5)
 
     def enter_hunter(self, target: str):
+        self.sleep(3)
         self.walk_until_interac_or_combat(script=self.WALK_METHOD.get(target, ["w"]))
         if self.is_in_team() and self.find_interac():
             self.wait_until(
@@ -277,30 +284,8 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
                 ):
                     return result
 
-    def rotate_and_find_treasure(self, check_boss=False):
-        if result := self.find_boss_treasure():
-            return result
-        if check_boss:
-            if self.wait_until(self.is_boss, time_out=1):
-                return
-
-        def sleep(sec):
-            deadline = time.time() + sec
-            while time.time() < deadline:
-                if check_boss and self.is_boss():
-                    return True
-                self.sleep(0.1)
-
-        for i in range(4):
-            self.log_info(f"Boss宝箱查找次数：{i + 1}/4")
-            self.send_key("a")
-            if sleep(0.3):
-                return
-            self.middle_click()
-            if sleep(1):
-                return
-            if result := self.find_boss_treasure():
-                return result
+    def rotate_and_find_treasure(self):
+        return self.rotate_and_find(self.find_boss_treasure, self.is_boss)
 
     def walk_to_boss_treasure(self):
         if self.rotate_and_find_treasure():
@@ -329,28 +314,31 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
 
     def do_combat_and_claim(self):
         self.log_info("战斗前检查是否有上次未领取的BOSS宝箱")
-        if self.rotate_and_find_treasure(check_boss=True):
+        if self.rotate_and_find_treasure():
             self.log_info("发现BOSS宝箱, 跳过战斗")
         else:
             self.log_info("未发现BOSS宝箱, 调用战斗模块")
-            self.walk_until_combat(run=True, delay=1)
-            self.combat_once(retarget_turn=False)
+            if self.walk_until_combat(run=True, delay=1):
+                self.combat_once(retarget_turn=False)
+            else:
+                return False
 
         self.log_info("调用领取BOSS宝箱模块")
 
-        def action():
-            if not self.find_interac():
-                self.walk_to_boss_treasure()
+        if not self.walk_to_boss_treasure():
+            return
 
-            if self.find_interac():
-                self.log_info("发现宝箱，正在领取交互中")
-                self.send_interac(handle_claim=False)
-                if self.wait_until(self.is_claim_btn_ready, raise_if_not_found=False, time_out=5):
-                    self.log_info("发现奖励领取页面，领取奖励")
-                    if self.wait_until(
-                        self.is_in_team,
-                        pre_action=lambda: self.operate_click(0.609, 0.659, after_sleep=2),
-                    ):
-                        return True
+        self.log_info("正在领取交互中")
 
-        return self.retry_on_action(action, reset_action=self.ensure_main)
+        if self.wait_until(
+            self.is_claim_btn_ready,
+            pre_action=lambda: self.send_interac(handle_claim=False),
+            raise_if_not_found=False,
+            time_out=5,
+        ):
+            self.log_info("发现奖励领取页面，领取奖励")
+            if self.wait_until(
+                self.is_in_team,
+                pre_action=lambda: self.operate_click(0.609, 0.659, after_sleep=2),
+            ):
+                return True

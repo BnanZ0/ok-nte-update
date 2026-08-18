@@ -12,7 +12,7 @@ from src.process_feature import process_feature
 if "PATH" not in os.environ:
     os.environ["PATH"] = ""
 
-version = "v1.2.30"
+version = "v1.3.5"
 # 不需要修改version, Github Action打包会自动修改
 
 key_config_option = ConfigOption(
@@ -73,6 +73,9 @@ def blur_area(width, height):
 
 config = {
     "custom_tasks": True,  # enable creating and editing custom tasks
+    "gui": {
+        "type": "qt",
+    },
     "debug": False,  # Optional, default: False
     "use_gui": True,  # 目前只支持True
     "config_folder": "configs",  # 最好不要修改
@@ -97,13 +100,6 @@ config = {
                 "use_openvino": True,
             },
         },
-        # "bg_onnx_ocr": {
-        #     "lib": "onnxocr",
-        #     "auto_simplify": True,
-        #     "params": {
-        #         "use_openvino": True,
-        #     },
-        # },
     },
     "windows": {  # Windows游戏请填写此设置
         "exe": GAME_EXE,
@@ -142,12 +138,21 @@ config = {
         "default": {
             "github": "https://github.com/BnanZ0/ok-nte",
             "discord": "https://discord.gg/vVyCatEBgA",
+            "download": "https://ok-script.com/ok-nte",
+            "sponsor": "https://github.com/BnanZ0/ok-nte/blob/main/SPONSOR.md",
+            "share": "Download OK-NTE https://ok-script.com/ok-nte",
+            "faq": "https://ok-script.com/ok-nte",
+        },
+        "zh_CN": {
+            "github": "https://github.com/BnanZ0/ok-nte",
+            "discord": "https://discord.gg/vVyCatEBgA",
+            "download": "https://ok-script.com/ok-nte",
             "sponsor": "https://cnb.cool/BnanZ0/ok-nte-update/-/blob/main/SPONSOR.md",
-            "share": "Download from https://github.com/BnanZ0/ok-nte",
+            "share": "下载 OK-NTE https://ok-script.com/ok-nte",
+            "faq": "https://ok-script.com/ok-nte",
             "qq_group": "https://qm.qq.com/q/bIiSLoUTVS",
-            "faq": "https://github.com/BnanZ0/ok-nte",
             "qq_channel": "https://pd.qq.com/s/djmm6l44y",
-        }
+        },
     },
     "about": """
         <p style="color:red;">
@@ -187,7 +192,7 @@ config = {
     ],  # 可选. 全局单例对象, 可以存放加载的模型, 使用og.my_app调用
     "onetime_tasks": [  # 用户点击触发的任务
         ["src.tasks.LauncherTask", "LauncherTask"],
-        ["src.tasks.DailyTask", "DailyTask"],
+        ["src.tasks.daily.DailyRoutineTask", "DailyRoutineTask"],
         ["src.tasks.FishingTask", "FishingTask"],
         ["src.tasks.AnomalyTask", "AnomalyTask"],
         ["src.tasks.AnomalyHunter", "AnomalyHunter"],
@@ -198,13 +203,18 @@ config = {
         ["src.tasks.BagelAITools", "BagelAITools"],
         ["src.tasks.WhirlwindTask", "WhirlwindTask"],
         ["src.tasks.DSDFarmTask", "DSDFarmTask"],
+        ["src.tasks.AutoBidAuctionTask", "AutoBidAuctionTask"],
+        ["src.tasks.VolleyballTask", "VolleyballTask"],
+        # 测试相关
+        ["src.tasks.CombatDetectionTestTask", "CombatDetectionTestTask"],
+        ["ok", "DiagnosisTask"],
+        # 日常相关
+        ["src.tasks.daily.DailyClaimTask", "DailyClaimTask"],
         ["src.tasks.daily.GiftTask", "GiftTask"],
         ["src.tasks.daily.CoffeeTask", "CoffeeTask"],
         ["src.tasks.daily.FountainTask", "FountainTask"],
         ["src.tasks.daily.FurnitureTask", "FurnitureTask"],
         ["src.tasks.daily.CinemaDateTask", "CinemaDateTask"],
-        ["src.tasks.CombatDetectionTestTask", "CombatDetectionTestTask"],
-        ["ok", "DiagnosisTask"],
         # ["src.tasks.custom.TeamScannerTask", "TeamScannerTask"],
         # ["src.tasks.DebugCharTask", "DebugCharTask"],
     ],
@@ -217,8 +227,9 @@ config = {
         ["src.tasks.trigger.AutoLoginTask", "AutoLoginTask"],
     ],
     "custom_tabs": [
-        ["src.ui.CharHubTab", "CharHubTab"],
+        ["src.ui.DailyRoutineTab", "DailyRoutineTab"],
         ["src.ui.GiftManagerTab", "GiftManagerTab"],
+        ["src.ui.CharHubTab", "CharHubTab"],
         ["src.ui.MidiPlayerTab", "MidiPlayerTab"],
         # ['src.ui.MyTab', 'MyTab'], #可选, 自定义UI, 显示在侧边栏
     ],

@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 from ok import Box, Logger, og
-from ok.gui.Communicate import communicate
+from ok.ui.qt.Communicate import communicate
 
 logger = Logger.get_logger(__name__)
 
@@ -24,7 +24,7 @@ class YOLO26OpenVINOAsyncDetector:
                 "自动战斗的目标检测将不可用，交战流畅度将受到影响。"
             )
             logger.error(message)
-            communicate.notification.emit(message, "OpenVINO", True, True, None, None)
+            communicate.notification.emit(message, "OpenVINO", True, True, None, None, None)
             self.latest_results = False
             self.latest_image = None
             self.latency = 0.0
