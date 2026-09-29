@@ -17,9 +17,10 @@ from ok import (
 )
 
 from src import text_black_color
+from src.events import ConfirmationRequested, communicate
 from src.Labels import Labels
 from src.scene.NTEScene import NTEScene
-from src.scene.ScreenPosition import ScreenPosition
+from src.scene.PositionMap import PositionMap
 from src.tasks.mixin.CharUIMixin import CharUIMixin
 from src.tasks.mixin.MovementMixin import MovementMixin
 from src.tasks.mixin.OgMixin import OgMixin
@@ -38,9 +39,17 @@ MSG_MAIN_DETECTION_FAILED = (
     "2. 尝试开启 Windows “自动管理应用的颜色”设置。"
 )
 MSG_WORLD_DETECTION_FAILED = "大世界检测失败: 请检查游戏内 UI 透明度是否已设置为 1.0。"
+MOUSE_CONTROL_WARNING_TITLE = "鼠标占用警告"
+MOUSE_CONTROL_WARNING = (
+    "即将运行: {mode}\n\n"
+    "此任务会频繁控制鼠标。\n"
+    "停止方法: 按热键暂停 ok-nte, 再手动停止任务。\n\n"
+    "当前热键: {hotkey}\n"
+    "如不确定热键, 请点击取消, 确认后再运行。"
+)
 
 
-class BaseNTETask(
+class BaseNTETask( # pyright: ignore[reportIncompatibleMethodOverride]
     SceneFlowMixin,
     CharUIMixin,
     MovementMixin,
@@ -59,7 +68,7 @@ class BaseNTETask(
         self.key_config = self.get_global_config("Game Hotkey Config")
         self.monthly_card_config = self.get_global_config("Monthly Card Config")
         self.sound_config = self.get_global_config("Sound Trigger Config")
-        self.default_box = ScreenPosition(self)
+        self.pos = PositionMap(self)
         self._init_char_ui_state()
         self.next_monthly_card_start = 0
         self._last_interval_action_time = {}
@@ -71,6 +80,27 @@ class BaseNTETask(
         self.config_description.update(
             {self.CONF_CLAIM_REWARD_COUNT: "设置为0则领取当前体力可领取的全部奖励"}
         )
+
+    def confirm_mouse_control_warning(
+        self, *, mode: str | None = None, close_delay_seconds: int = 3
+    ) -> bool:
+        try:
+            hotkey = og.executor.basic_options.get("Start/Stop")
+        except Exception:
+            hotkey = "--"
+
+        if mode is None:
+            mode = self.tr(self.name)
+
+        confirmation = ConfirmationRequested(
+            self.tr(MOUSE_CONTROL_WARNING_TITLE),
+            self.tr(MOUSE_CONTROL_WARNING).format(mode=mode, hotkey=hotkey),
+            rich_text=False,
+            hide_cancel=False,
+            close_delay_seconds=close_delay_seconds,
+        )
+        communicate.confirmation_requested.emit(confirmation)
+        return confirmation.wait_for_response()
 
     @property
     def thread_pool_executor(self) -> ThreadPoolExecutor | None:
@@ -138,9 +168,21 @@ class BaseNTETask(
     def openvino_available(self):
         return getattr(og.my_app, "openvino_available", None)
 
-    @property
-    def main_viewport(self):
-        return self.box_of_screen(0.0984, 0.1042, 0.8961, 0.8944, name="main_viewport")
+    def parse_ocr_number(self, ocr_result) -> int:
+        if not ocr_result:
+            return 0
+
+        result = "".join(item.name for item in ocr_result)
+        result = re.sub(r"[,.]", "", result)
+        match = re.search(r"(\d+)", result)
+        if not match:
+            return 0
+
+        try:
+            return int(match.group(1))
+        except ValueError:
+            self.log_warning(f"OCR number parse error: {result}")
+            return 0
 
     # fmt: off
     def click(self, x: int | Box | List[Box] = -1, y=-1, move_back=None, name=None,
@@ -753,7 +795,7 @@ class BaseNTETask(
 
         def action():
             self.openESCpanel()
-            self.operate_click(0.9305, 0.8729)
+            self.operate_click(*self.pos.panels.esc.back_to_login)
             self.sleep(0.5)
             return self.find_confirm(box=box)
 
@@ -766,7 +808,7 @@ class BaseNTETask(
         # now = time.time()
         result = self.find_one(
             Labels.treasure,
-            box=self.main_viewport,
+            box=self.pos.screen.main_viewport.to_box(),
             threshold=0.7,
             use_gray_scale=True,
         )
@@ -893,7 +935,7 @@ class BaseNTETask(
         raise_if_not_found=True,
     ):
         if range is None:
-            box = self.main_viewport
+            box = self.pos.screen.main_viewport.to_box()
         elif isinstance(range, Box):
             box = range
         else:
@@ -913,7 +955,7 @@ class BaseNTETask(
             self.sleep(0.1)
         result = self.wait_until(
             lambda: not self.find_confirm(box=box),
-            pre_action=lambda: self.operate_click(button, interval=1),
+            pre_action=lambda: self.operate_click(button, interval=2),
             time_out=time_out,
             settle_time=settle_time,
             raise_if_not_found=raise_if_not_found,
@@ -922,7 +964,7 @@ class BaseNTETask(
 
     def find_confirm(self, box=None, threshold=0.7) -> Box:
         if not isinstance(box, Box):
-            box = self.main_viewport
+            box = self.pos.screen.main_viewport.to_box()
         return self.find_best_match_in_box(
             box=box,
             to_find=[Labels.confirm_btn_1, Labels.confirm_btn_2],
@@ -932,7 +974,7 @@ class BaseNTETask(
 
     def find_confirms(self, box=None, threshold=0.7) -> list[Box]:
         if not isinstance(box, Box):
-            box = self.main_viewport
+            box = self.pos.screen.main_viewport.to_box()
         match_feature: list[list[Box]] = []
         for feature_name in [Labels.confirm_btn_1, Labels.confirm_btn_2]:
             features = self.find_feature(
@@ -966,7 +1008,7 @@ class BaseNTETask(
         box = self.box_of_screen(0.785, 0.022, 0.814, 0.076, name="stamina_icon")
         self.wait_until(
             lambda: self.find_one(Labels.stamina_icon, box=box),
-            pre_action=lambda: self.operate_click(0.0563, 0.4924, interval=0.5),
+            pre_action=lambda: self.operate_click(*self.pos.panels.f1.domain, interval=0.5),
             settle_time=0.5,
             time_out=10,
         )

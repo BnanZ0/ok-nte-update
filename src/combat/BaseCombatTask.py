@@ -14,7 +14,7 @@ from src.char.BaseChar import BaseChar, Element
 from src.char.core.CharFactory import get_char_by_id, get_char_by_impl_id, get_char_by_pos
 from src.char.custom.CustomCharManager import CustomCharManager
 from src.combat.CombatCheck import CombatCheck
-from src.combat.planner import CombatPlanner
+from src.combat.planner import CombatPlanner, SwitchDecision
 from src.Labels import Labels
 from src.sound_trigger.SoundCombatContext import ACTION_UNSET, SoundCombatContext
 from src.tasks.mixin.CharUIMixin import CharElementUIMixin
@@ -307,7 +307,7 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
             self.freeze_durations.clear()
             self.freeze_durations.extend(records)
 
-    def time_elapsed_accounting_for_freeze(self, start, intro_motion_freeze=False):
+    def time_elapsed_accounting_for_freeze(self, start, intro_motion_freeze=False) -> float:
         """计算扣除冻结时间后经过的时间。
 
         Args:
@@ -459,12 +459,11 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
         free_intro=False,
         require_intro=False,
     ):
-        decision = self.combat_planner.decide_switch(
+        return self.combat_planner.decide_switch(
             current_char,
             free_intro=free_intro,
             require_intro=require_intro,
         )
-        return decision.target, decision.has_intro
 
     def _wait_switch_in_guard(
         self,
@@ -505,16 +504,18 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
 
     def _switch_to_char(
         self,
-        switch_to: "BaseChar",
+        decision: SwitchDecision,
         current_char: "BaseChar | None" = None,
-        has_intro=False,
         post_action=None,
         free_intro=False,
         retry_intro=False,
         log_prefix="switch char",
         time_out=10,
     ):
+        switch_to = decision.target
+        has_intro = decision.has_intro
         current_char_name = current_char.ufn_name if current_char else "None"
+        self.combat_planner.prepare_switch(decision)
         switch_to.has_intro = has_intro
         intro_replanned = False
         start_time = time.time()
@@ -570,14 +571,18 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
                 )
                 if retry_intro and not has_intro and not intro_replanned and intro_ready:
                     intro_replanned = True
-                    new_switch_to, new_has_intro = self._decide_switch_to(
+                    new_decision = self._decide_switch_to(
                         current_char,
                         free_intro,
                         require_intro=True,
                     )
+                    new_switch_to = new_decision.target
+                    new_has_intro = new_decision.has_intro
                     if new_has_intro and new_switch_to != current_char:
-                        if not self.combat_planner.has_strict_route(current_char):
+                        if not new_decision.skip_switch_waits:
                             self._wait_switch_in_guard(current_char, new_switch_to, new_has_intro)
+                        self.combat_planner.prepare_switch(new_decision)
+                        decision = new_decision
                         switch_to = new_switch_to
                         has_intro = new_has_intro
                         switch_to.has_intro = True
@@ -608,10 +613,16 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
 
                 self.sleep(0.01)
 
-        if has_intro and current_char:
-            if self.record_element_reaction(current_char, switch_to):
-                self.combat_planner.record_entry_reaction(current_char, switch_to)
-        self.combat_planner.record_switch(switch_to)
+        entry_reaction = bool(
+            has_intro
+            and current_char is not None
+            and self.record_element_reaction(current_char, switch_to)
+        )
+        self.combat_planner.complete_switch(
+            decision,
+            previous_char=current_char,
+            entry_reaction=entry_reaction,
+        )
 
         if post_action:
             logger.debug(f"post_action {post_action}")
@@ -686,15 +697,13 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
             )
             return
 
-        if not self.combat_planner.has_strict_route(current_char):
+        if not decision.skip_switch_waits:
             self._wait_switch_in_guard(current_char, switch_to, has_intro)
             current_char.wait_switch_cd()
 
-        self.combat_planner.expect_entry_action(switch_to, decision.expected_entry)
         self._switch_to_char(
-            switch_to,
+            decision,
             current_char=current_char,
-            has_intro=has_intro,
             post_action=post_action,
             free_intro=free_intro,
             retry_intro=True,
@@ -755,9 +764,8 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
             return
 
         self._switch_to_char(
-            switch_to,
+            decision,
             current_char=current_char,
-            has_intro=decision.has_intro,
             log_prefix=f"planner combat start ({decision.reason})",
         )
 

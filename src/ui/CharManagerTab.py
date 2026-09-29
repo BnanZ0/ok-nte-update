@@ -30,6 +30,9 @@ from qfluentwidgets import (
     FlowLayout,
     FluentIcon,
     Flyout,
+    GroupHeaderCardWidget,
+    HeaderCardWidget,
+    HyperlinkButton,
     ImageLabel,
     InfoBar,
     InfoBarIcon,
@@ -58,6 +61,7 @@ from src.ui.features.characters.safety_dialog import confirm_external_code_impor
 from src.ui.foundation.dialogs import MessageBoxBase
 from src.ui.foundation.i18n import is_chinese
 from src.ui.foundation.images import cv_to_pixmap
+from src.ui.foundation.text import highlight_bracketed_text
 from src.ui.foundation.widgets.cards import BorderCardWidget
 from src.ui.foundation.widgets.search import (
     SearchableComboBox,
@@ -72,6 +76,8 @@ class CharManagerTab(CustomTab):
         super().__init__()
         self.owner = owner
         self._executor = None
+        self.manager = CustomCharManager()
+
         self.tr_combo_title = self.tr("出招表")
         self.tr_save_success = self.tr("保存成功")
         self.tr_combo_msg = self.tr("{combo}: {} 绑定成功").replace("{combo}", self.tr_combo_title)
@@ -85,6 +91,7 @@ class CharManagerTab(CustomTab):
             "{combo}", self.tr_combo_title
         )
         self.tr_import_data = self.tr("导入数据")
+        self.tr_export_data = self.tr("导出数据")
         self.tr_open_external_chars_folder = self.tr("打开外置代码目录")
         self.tr_show_builtin = self.tr("显示内置")
         self.tr_copy_to_external = self.tr("复制为外置")
@@ -103,20 +110,12 @@ class CharManagerTab(CustomTab):
         self.tr_external_save_msg = self.tr("已应用外置代码: {}")
         self.tr_ask_ai = self.tr("询问AI")
         self.tr_ask_ai_copied = self.tr("AI提示模版已复制。请粘贴到AI聊天机器人中。")
-        self.tr_data_manager_hint = self.tr(
-            "导入数据会完整覆盖当前用户资料.\n导出数据会导出完整用户资料."
-        )
-        cnb_doc_url = "https://cnb.cool/BnanZ0/ok-nte-update/-/blob/main/docs/zh-CN/development/combat-planner.md"
-        gh_doc_url = (
-            "https://github.com/BnanZ0/ok-nte/blob/main/docs/en/development/combat-planner.md"
-        )
+        self.tr_data_backup = self.tr("数据备份")
+        self.tr_user_data = self.tr("用户数据")
+        self.tr_data_manager_hint = self.tr("ZIP 格式备份; 导入将覆盖当前数据")
         self.tr_external_chars_hint = self.tr(
-            "手动添加或修改 Python 代码后, 需点击 [{refresh}] 以生效. "
-            "关于编写角色出招表的指南, 请参考 <a href='{doc_url}'>文档</a>."
-        ).format(
-            refresh=self.tr("刷新列表"),
-            doc_url=cnb_doc_url if is_chinese() else gh_doc_url,
-        )
+            "手动修改 Python 代码后, 需点击 [{refresh}] 生效"
+        ).format(refresh=self.tr("刷新列表"))
         self.tr_import_failed = self.tr("导入失败")
         self.tr_import_success = self.tr("导入成功")
         self.tr_import_msg = self.tr("已导入 {} 个文件")
@@ -137,16 +136,34 @@ class CharManagerTab(CustomTab):
         )
         self.tr_delete = self.tr("删除")
         self.tr_combo_tips = self.tr(
-            '除了选择内建存在的<b style="color: #0078d7;">{combo}</b>外,'
-            '您也可以自己输入名称来建立自己的<b style="color: #0078d7;">{combo}</b>.'
-        ).replace("{combo}", self.tr_combo_title)
+            "除了选择内建存在的 [{combo}] 外,您也可以自己输入名称来建立自己的 [{combo}]。"
+        ).format(combo=self.tr_combo_title)
+        self.tr_combo_tips += "<br><br>" + self.tr(
+            "<b>外置代码用法:</b><br>"
+            "在 [{data_manager}] 中点击 [{show_builtin}], "
+            "选中内置角色后点击 [{copy_external}] 创建可编辑副本。<br>"
+            "回到此页, 选择 {external_code} 脚本, "
+            "修改 Python 代码后点击 [{apply}] 保存并绑定到当前角色。<br>"
+            "也可在 [{data_manager}] 中点击 [{open_folder}] 手动编辑 .py 文件, "
+            "保存后点击 [{refresh}] 重新加载。"
+            "每个文件须且仅须定义一个 BaseChar 子类。<br>"
+            "外置代码会以本软件相同权限运行, 请仅使用可信来源。"
+        ).format(
+            data_manager=self.tr("资料管理"),
+            show_builtin=self.tr_show_builtin,
+            copy_external=self.tr_copy_to_external,
+            external_code=self.manager.get_external_prefix(),
+            apply=self.tr("应用更改"),
+            open_folder=self.tr_open_external_chars_folder,
+            refresh=self.tr("刷新列表"),
+        )
+        self.tr_combo_tips = highlight_bracketed_text(self.tr_combo_tips, "#0078d7")
         self.tr_unbound_text = self.tr(
             "当前未绑定任何{combo}.\n遇到此角色将默认使用基础通用脚本(BaseChar)."
         ).replace("{combo}", self.tr_combo_title)
         self.tr_no_match_cmd = self.tr("没有找到匹配的指令。")
 
         self.icon = FluentIcon.PEOPLE
-        self.manager = CustomCharManager()
         self.task: DebugCharTask | None = None
         self._combo_test_pending = False
         self._doc_cache_by_locale = {}
@@ -191,9 +208,14 @@ class CharManagerTab(CustomTab):
         self.data_manager_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.data_manager_btn.clicked.connect(self.show_data_manager)
 
+        self.workshop_btn = PushButton(FluentIcon.BOOK_SHELF, self.tr("工坊"), self)
+        self.workshop_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.workshop_btn.clicked.connect(self.on_open_workshop)
+
         self.left_v_layout.addWidget(self.refresh_btn)
         self.left_v_layout.addWidget(self.delete_char_btn)
         self.left_v_layout.addWidget(self.data_manager_btn)
+        self.left_v_layout.addWidget(self.workshop_btn)
         self.left_v_layout.addWidget(self.char_list_widget, 1)
 
         # Right side: Detail View
@@ -299,11 +321,12 @@ class CharManagerTab(CustomTab):
         self.combo_select.currentTextChanged.connect(self.on_combo_changed)
         self.combo_header_layout.addWidget(self.combo_select, 1)
 
-        self.combo_manage_btn = PushButton(
-            FluentIcon.SETTING, self.tr("管理"), self.combo_main_widget
+        self.combo_unbind_btn = PushButton(
+            FluentIcon.LINK, self.tr_unbind_success, self.combo_main_widget
         )
-        self.combo_manage_btn.clicked.connect(self.show_combo_manager_dialog)
-        self.combo_header_layout.addWidget(self.combo_manage_btn)
+        self.combo_unbind_btn.setEnabled(False)
+        self.combo_unbind_btn.clicked.connect(self.on_unbind_combo)
+        self.combo_header_layout.addWidget(self.combo_unbind_btn)
 
         self.combo_doc_btn = ToggleButton(
             FluentIcon.DOCUMENT, self.tr("可用指令"), self.combo_main_widget
@@ -472,44 +495,49 @@ class CharManagerTab(CustomTab):
 
         reveal_in_explorer(zip_path)
 
+    def on_open_workshop(self) -> None:
+        if self.owner and hasattr(self.owner, "navigate_to_workshop"):
+            self.owner.navigate_to_workshop()
+
     def show_data_manager(self):
         dialog = MessageBoxBase(self.window())
-        dialog.widget.setMinimumWidth(460)
-        dialog.viewLayout.addWidget(SubtitleLabel(self.tr("资料管理"), dialog))
+        dialog.widget.setMinimumWidth(860)
+        dialog.widget.setMinimumHeight(740)
+        dialog.viewLayout.setSpacing(14)
 
-        backup_layout = QHBoxLayout()
-        import_data_btn = PushButton(FluentIcon.DOWNLOAD, self.tr_import_data, dialog)
-        export_data_btn = PushButton(FluentIcon.SHARE, self.tr("导出数据"), dialog)
-        backup_layout.addWidget(import_data_btn)
-        backup_layout.addWidget(export_data_btn)
-        dialog.viewLayout.addLayout(backup_layout)
-        data_manager_hint = CaptionLabel(self.tr_data_manager_hint, dialog)
-        data_manager_hint.setWordWrap(True)
-        dialog.viewLayout.addWidget(data_manager_hint)
-
-        import_data_btn.clicked.connect(self.on_import_data)
-        export_data_btn.clicked.connect(self.on_export_data)
-        dialog.yesButton.setText(self.tr("关闭"))
-        dialog.cancelButton.hide()
-        dialog.exec()
-
-    def show_combo_manager_dialog(self):
-        dialog = MessageBoxBase(self.window())
-        dialog.widget.setMinimumWidth(760)
-        dialog.widget.setMinimumHeight(560)
-        dialog.viewLayout.setSpacing(12)
-
-        # Title bar: '管理' label
-        title_label = SubtitleLabel(self.tr("管理"), dialog)
+        # Title bar: '资料管理' label
+        title_label = SubtitleLabel(self.tr("资料管理"), dialog)
         dialog.viewLayout.addWidget(title_label)
 
-        external_chars_hint = CaptionLabel(self.tr_external_chars_hint, dialog)
-        external_chars_hint.setOpenExternalLinks(True)
-        external_chars_hint.setWordWrap(True)
-        dialog.viewLayout.addWidget(external_chars_hint)
+        # === Card 1: 出招表 (原生 HeaderCardWidget) ===
+        combo_card = HeaderCardWidget(dialog)
+        combo_card.setTitle(self.tr("出招表"))
+        combo_card.headerView.setFixedHeight(48)
+        combo_card.headerLayout.removeWidget(combo_card.headerLabel)
 
-        # CommandBar in SimpleCardWidget
-        command_card = SimpleCardWidget(dialog)
+        combo_card.headerLayout.addWidget(combo_card.headerLabel)
+        refresh_hint = CaptionLabel(self.tr_external_chars_hint, combo_card)
+        combo_card.headerLayout.addSpacing(14)
+        combo_card.headerLayout.addWidget(refresh_hint)
+
+        combo_card.headerLayout.addStretch(1)
+
+        cnb_doc_url = "https://cnb.cool/BnanZ0/ok-nte-update/-/blob/main/docs/zh-CN/development/combat-planner.md"
+        gh_doc_url = (
+            "https://github.com/BnanZ0/ok-nte/blob/main/docs/en/development/combat-planner.md"
+        )
+        doc_url = cnb_doc_url if is_chinese() else gh_doc_url
+        doc_btn = HyperlinkButton(doc_url, self.tr("编写指南"), combo_card, FluentIcon.DOCUMENT)
+        combo_card.headerLayout.addWidget(doc_btn)
+
+        combo_view_layout = QVBoxLayout()
+        combo_view_layout.setContentsMargins(0, 0, 0, 0)
+        combo_view_layout.setSpacing(10)
+        combo_card.viewLayout.setContentsMargins(20, 12, 20, 16)
+        combo_card.viewLayout.addLayout(combo_view_layout)
+
+        # CommandBar in SimpleCardWidget for visual hierarchy
+        command_card = SimpleCardWidget(combo_card)
         command_layout = QHBoxLayout(command_card)
         command_layout.setContentsMargins(10, 6, 10, 6)
 
@@ -540,14 +568,14 @@ class CharManagerTab(CustomTab):
         command_bar.addAction(open_folder_action)
 
         command_layout.addWidget(command_bar, 1)
-        dialog.viewLayout.addWidget(command_card)
+        combo_view_layout.addWidget(command_card)
 
         # Master-Detail layout: 5:5 split between List and Preview
         content_layout = QHBoxLayout()
-        content_layout.setSpacing(14)
+        content_layout.setSpacing(12)
 
         # Left column: Combo list (50% width)
-        combo_list_widget = SearchableListWidget(dialog)
+        combo_list_widget = SearchableListWidget(combo_card)
         combo_list_widget.setPlaceholderText(
             self.char_list_widget.search_edit.placeholderText().replace(
                 self.tr("角色"), self.tr_combo_title
@@ -556,15 +584,40 @@ class CharManagerTab(CustomTab):
         combo_list_widget.list_widget.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection
         )
+        combo_list_widget.list_widget.setMinimumHeight(320)
         content_layout.addWidget(combo_list_widget, 1)
 
         # Right column: Detail preview (50% width, read-only state)
-        editor_text = TextEdit(dialog)
+        editor_text = TextEdit(combo_card)
         editor_text.setPlaceholderText(self.tr_unbound_text)
         editor_text.setReadOnly(True)
+        editor_text.setMinimumHeight(320)
         content_layout.addWidget(editor_text, 1)
 
-        dialog.viewLayout.addLayout(content_layout, 1)
+        combo_view_layout.addLayout(content_layout, 1)
+        dialog.viewLayout.addWidget(combo_card, 1)
+
+        # === Card 2: 数据备份 (原生 GroupHeaderCardWidget) ===
+        data_card = GroupHeaderCardWidget(dialog)
+        data_card.setTitle(self.tr_data_backup)
+
+        export_data_btn = PushButton(FluentIcon.SHARE, self.tr_export_data, data_card)
+        import_data_btn = PushButton(FluentIcon.DOWNLOAD, self.tr_import_data, data_card)
+
+        backup_btn_widget = QWidget(data_card)
+        backup_btn_layout = QHBoxLayout(backup_btn_widget)
+        backup_btn_layout.setContentsMargins(0, 0, 0, 0)
+        backup_btn_layout.setSpacing(10)
+        backup_btn_layout.addWidget(export_data_btn)
+        backup_btn_layout.addWidget(import_data_btn)
+
+        data_card.addGroup(
+            FluentIcon.ZIP_FOLDER,
+            self.tr_user_data,
+            self.tr_data_manager_hint,
+            backup_btn_widget,
+        )
+        dialog.viewLayout.addWidget(data_card, 0)
 
         # Fluent standard bottom button bar: only Close button
         dialog.yesButton.setText(self.tr("关闭"))
@@ -733,6 +786,15 @@ class CharManagerTab(CustomTab):
 
         batch_delete_action.triggered.connect(on_batch_delete)
 
+        def on_import_and_refresh():
+            self.on_import_data()
+            dialog.setProperty("combos_modified", True)
+            populate_combos(select_first=True)
+            editor_text.clear()
+
+        import_data_btn.clicked.connect(on_import_and_refresh)
+        export_data_btn.clicked.connect(self.on_export_data)
+
         populate_combos()
 
         dialog.exec()
@@ -743,6 +805,8 @@ class CharManagerTab(CustomTab):
                 self._render_right_panel()
             else:
                 self.on_combo_changed("")
+
+    show_combo_manager_dialog = show_data_manager
 
     def _init_doc_wing(self):
         self.doc_wing = QWidget(self.combo_card)
@@ -926,6 +990,11 @@ class CharManagerTab(CustomTab):
             self._render_right_panel()
 
     def on_combo_changed(self, combo_name, combo_id=None):
+        has_bound_combo = bool(
+            self.current_char_id and self.manager.get_character_impl_id_by_id(self.current_char_id)
+        )
+        self.combo_unbind_btn.setEnabled(has_bound_combo)
+
         if combo_name == "":
             self.combo_text.setPlainText(self.tr_unbound_text)
             self.combo_text.setReadOnly(True)

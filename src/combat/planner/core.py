@@ -142,7 +142,7 @@ class CombatPlanner:
     关键行为:
         - 切人评分与进场执行顺序分离。评分选出的最佳 action 只用于判断目标角色
           是否值得切入；普通切入后仍按角色声明顺序尝试 action。
-        - strict route / entry reaction 才会设置 expected entry 并强制首动。
+        - strict route 和普通 claim 可以设置 expected entry 并优先尝试该动作。
         - `priority_ready` 只用于评分；`can_execute` 是硬限制。
     """
 
@@ -275,12 +275,26 @@ class CombatPlanner:
 
         self.state.record_switch(target_char)
 
-    def expect_entry_action(
-        self, target_char: "BaseChar", expected_entry: ExpectedEntry | None
-    ) -> None:
-        """登记目标角色下次切入后应优先尝试的动作。"""
+    def prepare_switch(self, decision: SwitchDecision) -> None:
+        """准备执行切人决策，并清理目标角色残留的入场动作期望。"""
 
-        self.state.set_pending_entry_expectation(target_char, expected_entry)
+        self.state.set_pending_entry_expectation(decision.target, None)
+
+    def complete_switch(
+        self,
+        decision: SwitchDecision,
+        previous_char: "BaseChar | None" = None,
+        entry_reaction: bool = False,
+    ) -> None:
+        """记录已确认的切人，并应用最终决策的入场动作期望。"""
+
+        target_char = decision.target
+        if previous_char is not None and previous_char != target_char:
+            self.state.set_pending_entry_expectation(previous_char, None)
+        self.state.set_pending_entry_expectation(target_char, decision.expected_entry)
+        if entry_reaction and previous_char is not None:
+            self.record_entry_reaction(previous_char, target_char)
+        self.record_switch(target_char)
 
     def perform_current_char(self, current_char: "BaseChar") -> ActionResult | None:
         """规划并执行当前在场角色的动作。
@@ -548,7 +562,7 @@ class CombatPlanner:
         try:
             action = next(entry_flow) if result is None else entry_flow.send(result)
         except StopIteration:
-            return None
+            action = None
         published_requests = context._consume_published_requests()
         self._ensure_followup_sources(context.current_char, published_requests)
         self.state.add_requests(published_requests)
@@ -592,8 +606,8 @@ class CombatPlanner:
     ) -> SwitchDecision:
         """根据当前状态决定是否切人以及切给谁。
 
-        优先级顺序为 strict route、入场/环合请求、游戏环合反应、普通动作评分。
-        只有 strict route 这类硬调度会返回 `SwitchDecision.expected_entry`。
+        优先级依次为已锁定的 strict route, strict claim, 入场/环合请求,
+        游戏环合反应, 普通动作评分。strict claim 只指定切入目标。
         普通评分只决定“谁值得切出来”，不改写目标角色自己的动作声明顺序。
 
         普通动作评分时，每个角色只用自己的最佳 action 参与比较；多个 action 的
@@ -610,8 +624,8 @@ class CombatPlanner:
             require_intro: 只接受能触发 intro 的目标；通常用于切人过程中重算。
 
         返回:
-            `SwitchDecision`。普通评分下 `expected_entry` 通常为 None；strict route
-            会设置它来保证切入后先执行路线要求动作。
+            `SwitchDecision`。strict route 或普通 claim 可设置 `expected_entry`,
+            使匹配的动作在切入后优先尝试。
         """
 
         plan_cache: dict[int, _PlanSnapshot] = {}
@@ -624,6 +638,11 @@ class CombatPlanner:
         if route_decision is not None:
             self._log_switch_decision(current_char, route_decision)
             return route_decision
+
+        claim_decision = self._strict_claim_decision(current_char, context, has_intro)
+        if claim_decision is not None:
+            self._log_switch_decision(current_char, claim_decision)
+            return claim_decision
 
         entry_request_decision = self._entry_reaction_request_decision(
             current_char, context, has_intro
@@ -1119,6 +1138,7 @@ class CombatPlanner:
                     priority=999999,
                     has_intro=has_intro,
                     expected_entry=None,
+                    skip_switch_waits=True,
                 )
             if step.requires_entry_reaction:
                 if not has_intro:
@@ -1129,6 +1149,7 @@ class CombatPlanner:
                         priority=999998,
                         has_intro=has_intro,
                         expected_entry=None,
+                        skip_switch_waits=True,
                     )
                 return SwitchDecision(
                     target=target,
@@ -1136,19 +1157,19 @@ class CombatPlanner:
                     priority=999999,
                     has_intro=has_intro,
                     expected_entry=None,
+                    skip_switch_waits=True,
                 )
             action = self._strict_route_action(target, self._actions_for(target, context), context)
-            expected = (
-                ExpectedEntry.from_action(action)
-                if action is not None
-                else ExpectedEntry(slot=step.slot)
-            )
+            expected = ExpectedEntry.from_action(action) if action is not None else None
+            if expected is None and not step.optional:
+                expected = ExpectedEntry(slot=step.slot)
             return SwitchDecision(
                 target=target,
                 reason=f"strict route: {request.reason} / {step.reason}",
                 priority=999999,
                 has_intro=has_intro,
                 expected_entry=expected,
+                skip_switch_waits=True,
             )
 
         return SwitchDecision(
@@ -1157,6 +1178,7 @@ class CombatPlanner:
             priority=999998,
             has_intro=has_intro,
             expected_entry=None,
+            skip_switch_waits=True,
         )
 
     def _strict_route_target(self, context: CombatContext, step: FollowupStep) -> "BaseChar | None":
@@ -1222,7 +1244,40 @@ class CombatPlanner:
         claims = [claim for claim in self._claims_for(char, context) if claim.matches_char(char)]
         if not claims:
             return None
-        return max(claims, key=lambda claim: FIELD_CLAIM_SCORES.get(claim.level, 0))
+        return max(
+            claims,
+            key=lambda claim: (
+                claim.level == FieldClaimLevel.STRICT,
+                FIELD_CLAIM_SCORES.get(claim.level, 0),
+            ),
+        )
+
+    def _strict_claim_decision(
+        self, current_char: "BaseChar", context: CombatContext, has_intro: bool
+    ) -> SwitchDecision | None:
+        candidates = []
+        for char in self.state.chars:
+            if char == current_char or not self._can_switch_to(char):
+                continue
+            claim = self._best_field_claim_for(char, context)
+            if claim is None or claim.level != FieldClaimLevel.STRICT:
+                continue
+            score, _, _, breakdown = self._score_char(char, context, current_char=False)
+            candidates.append((score, -char.last_perform, -char.index, char, claim, breakdown))
+
+        if not candidates:
+            return None
+        _, _, _, target, claim, breakdown = max(candidates)
+        return SwitchDecision(
+            target=target,
+            reason=f"strict field claim: {claim.reason}",
+            priority=999999,
+            has_intro=has_intro,
+            expected_entry=None,
+            score_breakdown=breakdown.format(),
+            strict=True,
+            skip_switch_waits=True,
+        )
 
     def _base_action_score(
         self,

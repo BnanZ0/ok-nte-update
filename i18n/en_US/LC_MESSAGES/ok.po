@@ -99,8 +99,8 @@ msgstr "Add feature"
 msgid "匹配文字"
 msgstr "Match Text"
 
-msgid "受《异环》UI的特殊性影响, 部分场景下存在识别稳定性波动"
-msgstr "Due to the uniqueness of Neverness-to-Everness UI, recognition stability may fluctuate in some scenarios."
+msgid "适用于大世界、轨外之境、999夜等各类场景与副本"
+msgstr "Suitable for various scenes and domains such as overworld, Beyond the Rails, 999 Nights, etc."
 
 msgid "可用指令"
 msgstr "Available Commands"
@@ -265,8 +265,8 @@ msgstr "Team size less than 2"
 msgid "队伍管理"
 msgstr "Team Mgmt"
 
-msgid "关闭时仅在中键选中敌人且画面识别到 'Lv' 文字时开启战斗"
-msgstr "When disabled, combat starts only if an enemy is middle-clicked and 'Lv' is detected on screen"
+msgid "关闭时仅在中键选中敌人且画面识别到关键特征时开启战斗"
+msgstr "When disabled, combat starts only if an enemy is middle-clicked and key features are detected on screen"
 
 msgid ""
 "开启后优先通过 ESC 键关闭成功界面，避免后台抢占鼠标。\n"
@@ -831,8 +831,22 @@ msgstr "Anomaly Furniture"
 msgid "每2小时重新登入"
 msgstr "Re-login every 2 hours"
 
-msgid "除了选择内建存在的<b style=\"color: #0078d7;\">{combo}</b>外,您也可以自己输入名称来建立自己的<b style=\"color: #0078d7;\">{combo}</b>."
-msgstr "In addition to selecting a built-in <b style=\"color: #0078d7;\">{combo}</b>, you can also enter a name to create your own <b style=\"color: #0078d7;\">{combo}</b>."
+msgid "除了选择内建存在的 [{combo}] 外,您也可以自己输入名称来建立自己的 [{combo}]。"
+msgstr "In addition to selecting a built-in [{combo}], you can also enter a name to create your own [{combo}]."
+
+msgid ""
+"<b>外置代码用法:</b><br>"
+"在 [{data_manager}] 中点击 [{show_builtin}], 选中内置角色后点击 [{copy_external}] 创建可编辑副本。<br>"
+"回到此页, 选择 {external_code} 脚本, 修改 Python 代码后点击 [{apply}] 保存并绑定到当前角色。<br>"
+"也可在 [{data_manager}] 中点击 [{open_folder}] 手动编辑 .py 文件, 保存后点击 [{refresh}] 重新加载。"
+"每个文件须且仅须定义一个 BaseChar 子类。<br>"
+"外置代码会以本软件相同权限运行, 请仅使用可信来源。"
+msgstr ""
+"<b>Using external code:</b><br>"
+"In [{data_manager}], click [{show_builtin}], select a built-in character, then click [{copy_external}] to create an editable copy.<br>"
+"Back on this page, select an {external_code} script, edit its Python code, and click [{apply}] to save it and bind it to the current character.<br>"
+"You can also open [{open_folder}] from [{data_manager}] to edit .py files manually. After saving, click [{refresh}] to reload them. Each file must define exactly one BaseChar subclass.<br>"
+"External code runs with the same permissions as this app. Use trusted code only."
 
 msgid "九百九十九夜"
 msgstr "999 Nights"
@@ -892,13 +906,21 @@ msgid "Open Download Page"
 msgstr "Open Download Page"
 
 msgid ""
-"⚠️ 正在运行{rob_mode}\n"
-"该模式会高频占用/争夺鼠标。如需停止，请使用热键暂停 ok-nte, 再手动停止任务。\n"
-"当前热键: {hotkey} (如无法确认当前热键则点击取消, 主动确认后再运行)"
+"即将运行: {mode}\n"
+"\n"
+"此任务会频繁控制鼠标。\n"
+"停止方法: 按热键暂停 ok-nte, 再手动停止任务。\n"
+"\n"
+"当前热键: {hotkey}\n"
+"如不确定热键, 请点击取消, 确认后再运行。"
 msgstr ""
-"⚠️ Running {rob_mode}\n"
-"This mode will occupy/fight for the mouse at high frequency. To stop, use the hotkey to pause ok-nte, then manually stop the task.\n"
-"Current hotkey: {hotkey} (if you cannot confirm the current hotkey, click cancel and run after confirming manually)"
+"⚠️ About to run: {mode}\n"
+"\n"
+"This task will control the mouse frequently.\n"
+"To stop: press the hotkey to pause ok-nte, then stop the task manually.\n"
+"\n"
+"Current hotkey: {hotkey}\n"
+"If you are unsure of the hotkey, click Cancel, confirm it, then run the task."
 
 msgid "赤龙古堡-残丝长巷篝火"
 msgstr "Red Dragon Castle - Silken Alley Checkpoint"
@@ -1097,11 +1119,6 @@ msgstr "Check in"
 msgid "捞币"
 msgstr "Scoop Coins"
 
-msgid ""
-"导入数据会完整覆盖当前用户资料.\n"
-"导出数据会导出完整用户资料."
-msgstr "Importing data will completely overwrite current user profiles.\nExporting data will export complete user profiles."
-
 msgid "资料管理"
 msgstr "Data Management"
 
@@ -1240,9 +1257,6 @@ msgstr "<p>Configure and save common 4-character team lineups and combos, effect
 msgid "OpenVINO 单次推理超时，已自动关闭目标检测；重启程序后会重新尝试启用。"
 msgstr "OpenVINO single inference timed out, target detection has been automatically disabled. It will be re-enabled upon restarting the program."
 
-msgid "管理"
-msgstr "Manage"
-
 msgid "批量删除"
 msgstr "Batch Delete"
 
@@ -1284,9 +1298,6 @@ msgstr "Failed to Apply External Code"
 
 msgid "已应用外置代码: {}"
 msgstr "Applied external code: {}"
-
-msgid "手动添加或修改 Python 代码后, 需点击 [{refresh}] 以生效. 关于编写角色出招表的指南, 请参考 <a href='{doc_url}'>文档</a>."
-msgstr "After manually adding or modifying Python code, click [{refresh}] to take effect. For guidelines on writing character combos, please refer to the <a href='{doc_url}'>documentation</a>."
 
 msgid "角色"
 msgstr "Character"
@@ -1464,3 +1475,33 @@ msgstr "Preset Deleted"
 
 msgid "部分外置代码删除失败: {}"
 msgstr "Failed to delete some external code: {}"
+
+msgid "启用开战优先级"
+msgstr "Enable Combat Start Priority"
+
+msgid "关闭时不按角色执行开战首切"
+msgstr "When disabled, initial character switch at combat start is not performed"
+
+msgid "鼠标占用警告"
+msgstr "Mouse Control Warning"
+
+msgid "数据备份"
+msgstr "Data Backup"
+
+msgid "用户数据"
+msgstr "User Data"
+
+msgid "ZIP 格式备份; 导入将覆盖当前数据"
+msgstr "ZIP backup; import will overwrite current data"
+
+msgid "手动修改 Python 代码后, 需点击 [{refresh}] 生效"
+msgstr "After manually modifying Python code, click [{refresh}] to take effect."
+
+msgid "编写指南"
+msgstr "Writing Guide"
+
+msgid "噗卡乐园 - 命中幸运星"
+msgstr "Puka Land - Hit the Lucky Star"
+
+msgid "在可进行NPC交互的位置启动任务"
+msgstr "Start the task at a location where NPC interaction is available"

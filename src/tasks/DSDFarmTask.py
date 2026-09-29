@@ -317,7 +317,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
         self.ensure_main()
         self.open_map()
         if not box:
-            box = self.main_viewport
+            box = self.pos.screen.main_viewport.to_box()
 
         teleports = self.find_feature(Labels.bonfire_teleport, box=box, threshold=threshold)
         if not teleports:
@@ -325,7 +325,8 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
 
         self.log_info(f"found map teleports {teleports}")
 
-        teleports.sort(key=lambda tp: tp.center_distance(self.default_box.center))
+        center_box = self.pos.screen.center.to_box()
+        teleports.sort(key=lambda tp: tp.center_distance(center_box))
 
         if len(teleports) >= order:
             teleport = teleports[order - 1]

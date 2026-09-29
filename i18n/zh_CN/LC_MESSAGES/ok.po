@@ -99,7 +99,7 @@ msgstr ""
 msgid "匹配文字"
 msgstr ""
 
-msgid "受《异环》UI的特殊性影响, 部分场景下存在识别稳定性波动"
+msgid "适用于大世界、轨外之境、999夜等各类场景与副本"
 msgstr ""
 
 msgid "可用指令"
@@ -263,7 +263,7 @@ msgstr ""
 msgid "队伍管理"
 msgstr ""
 
-msgid "关闭时仅在中键选中敌人且画面识别到 'Lv' 文字时开启战斗"
+msgid "关闭时仅在中键选中敌人且画面识别到关键特征时开启战斗"
 msgstr ""
 
 msgid ""
@@ -827,7 +827,16 @@ msgstr ""
 msgid "每2小时重新登入"
 msgstr ""
 
-msgid "除了选择内建存在的<b style=\"color: #0078d7;\">{combo}</b>外,您也可以自己输入名称来建立自己的<b style=\"color: #0078d7;\">{combo}</b>."
+msgid "除了选择内建存在的 [{combo}] 外,您也可以自己输入名称来建立自己的 [{combo}]。"
+msgstr ""
+
+msgid ""
+"<b>外置代码用法:</b><br>"
+"在 [{data_manager}] 中点击 [{show_builtin}], 选中内置角色后点击 [{copy_external}] 创建可编辑副本。<br>"
+"回到此页, 选择 {external_code} 脚本, 修改 Python 代码后点击 [{apply}] 保存并绑定到当前角色。<br>"
+"也可在 [{data_manager}] 中点击 [{open_folder}] 手动编辑 .py 文件, 保存后点击 [{refresh}] 重新加载。"
+"每个文件须且仅须定义一个 BaseChar 子类。<br>"
+"外置代码会以本软件相同权限运行, 请仅使用可信来源。"
 msgstr ""
 
 msgid "九百九十九夜"
@@ -888,9 +897,13 @@ msgid "Open Download Page"
 msgstr "打开下载页面"
 
 msgid ""
-"⚠️ 正在运行{rob_mode}\n"
-"该模式会高频占用/争夺鼠标。如需停止，请使用热键暂停 ok-nte, 再手动停止任务。\n"
-"当前热键: {hotkey} (如无法确认当前热键则点击取消, 主动确认后再运行)"
+"即将运行: {mode}\n"
+"\n"
+"此任务会频繁控制鼠标。\n"
+"停止方法: 按热键暂停 ok-nte, 再手动停止任务。\n"
+"\n"
+"当前热键: {hotkey}\n"
+"如不确定热键, 请点击取消, 确认后再运行。"
 msgstr ""
 
 msgid "赤龙古堡-残丝长巷篝火"
@@ -1083,11 +1096,6 @@ msgstr ""
 msgid "捞币"
 msgstr ""
 
-msgid ""
-"导入数据会完整覆盖当前用户资料.\n"
-"导出数据会导出完整用户资料."
-msgstr ""
-
 msgid "资料管理"
 msgstr ""
 
@@ -1226,9 +1234,6 @@ msgstr "<p>用于配置并保存常用的 4 人队伍阵容与出招表, 修改�
 msgid "OpenVINO 单次推理超时，已自动关闭目标检测；重启程序后会重新尝试启用。"
 msgstr ""
 
-msgid "管理"
-msgstr ""
-
 msgid "批量删除"
 msgstr ""
 
@@ -1270,9 +1275,6 @@ msgstr "外置代码应用失败"
 
 msgid "已应用外置代码: {}"
 msgstr "已应用外置代码: {}"
-
-msgid "手动添加或修改 Python 代码后, 需点击 [{refresh}] 以生效. 关于编写角色出招表的指南, 请参考 <a href='{doc_url}'>文档</a>."
-msgstr "手动添加或修改 Python 代码后, 需点击 [{refresh}] 以生效. 关于编写角色出招表的指南, 请参考 <a href='{doc_url}'>文档</a>."
 
 msgid "角色"
 msgstr "角色"
@@ -1449,4 +1451,34 @@ msgid "方案已删除"
 msgstr ""
 
 msgid "部分外置代码删除失败: {}"
+msgstr ""
+
+msgid "启用开战优先级"
+msgstr ""
+
+msgid "关闭时不按角色执行开战首切"
+msgstr ""
+
+msgid "鼠标占用警告"
+msgstr ""
+
+msgid "数据备份"
+msgstr "数据备份"
+
+msgid "用户数据"
+msgstr "用户数据"
+
+msgid "ZIP 格式备份; 导入将覆盖当前数据"
+msgstr "ZIP 格式备份; 导入将覆盖当前数据"
+
+msgid "手动修改 Python 代码后, 需点击 [{refresh}] 生效"
+msgstr "手动修改 Python 代码后, 需点击 [{refresh}] 生效"
+
+msgid "编写指南"
+msgstr "编写指南"
+
+msgid "噗卡乐园 - 命中幸运星"
+msgstr ""
+
+msgid "在可进行NPC交互的位置启动任务"
 msgstr ""
