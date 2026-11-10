@@ -137,13 +137,18 @@ class BaseNTETask(
         threshold: float = 0.7,
         force: bool = False,
         mask_regions=None,
+        *,
+        model: str = "target",
+        label: str | None = None,
     ) -> List[Box] | None:
+        """Run the selected model and optionally filter detections by class label."""
         if og.my_app is None:
             return []
+        box_name = f"openvino_{model}"
         if box is None:
-            box = self.box_of_screen(0, 0, 1, 1, name="openvino")
+            box = self.box_of_screen(0, 0, 1, 1, name=box_name)
         else:
-            box.name = "openvino"
+            box.name = box_name
         self.draw_boxes(boxes=box, color="blue")
         if frame is None:
             frame = self.frame
@@ -154,25 +159,28 @@ class BaseNTETask(
             threshold=threshold,
             force=force,
             mask_regions=mask_regions,
+            model=model,
+            label=label,
         )
         if results:
             self.draw_boxes(boxes=results, color="red")
         return results
 
-    def openvino_clear_cache(self):
+    def openvino_clear_cache(self, model: str = "target"):
         """清空缓存"""
         if og.my_app is None:
             return
-        og.my_app.openvino_clear_cache()
+        og.my_app.openvino_clear_cache(model)
 
-    def get_last_openvino_image(self):
+    def get_last_openvino_image(self, model: str = "target"):
         if og.my_app is None:
             return None
-        return getattr(og.my_app, "openvino_latest_image", None)
+        detector = og.my_app.get_openvino_detector(model, wait=False)
+        return detector.latest_image if detector is not None else None
 
-    @property
-    def openvino_available(self):
-        return getattr(og.my_app, "openvino_available", None)
+    def openvino_available(self, model: str = "target") -> bool | None:
+        app = og.my_app
+        return app.get_openvino_detector(model).available if app is not None else None
 
     def parse_ocr_number(self, ocr_result) -> int:
         if not ocr_result:
@@ -497,6 +505,31 @@ class BaseNTETask(
         box = box.copy(y_offset=y, width_offset=w, height_offset=-y)
         return self.find_one(Labels.teleport, box=box)
 
+    def open_map(self, zoom="mid"):
+        self.wait_until(
+            lambda: self.find_one(Labels.map_zoom_in),
+            time_out=30,
+            pre_action=lambda: self.send_key("m", interval=2),
+            raise_if_not_found=True,
+        )
+        self.sleep(1)
+
+        if zoom is None:
+            return
+
+        if isinstance(zoom, str):
+            if zoom == "max":
+                self.operate_click(0.050, 0.372)
+            elif zoom == "mid":
+                self.operate_click(0.050, 0.526)
+            elif zoom == "low":
+                self.operate_click(0.050, 0.590)
+            elif zoom == "min":
+                self.operate_click(0.050, 0.680)
+        elif callable(zoom):
+            zoom()
+        self.sleep(0.5)
+
     def _execute_map_teleport(self, find_func, zoom="mid", time_out=5):
         """
         通用的地图传送核心逻辑
@@ -506,25 +539,7 @@ class BaseNTETask(
         """
         # 1. 确保在主界面并打开地图
         self.ensure_main()
-        self.wait_until(
-            lambda: self.find_one(Labels.map_city_tycoon_activities),
-            time_out=10,
-            pre_action=lambda: self.send_key("m", interval=2),
-            raise_if_not_found=True,
-        )
-
-        if zoom is not None:
-            self.sleep(0.5)
-            if isinstance(zoom, str):
-                if zoom == "max":
-                    self.operate_click(0.050, 0.372)
-                elif zoom == "mid":
-                    self.operate_click(0.050, 0.525)
-                elif zoom == "min":
-                    self.operate_click(0.050, 0.680)
-            elif callable(zoom):
-                zoom()
-            self.sleep(0.5)
+        self.open_map(zoom=zoom)
 
         # 2. 执行传入的自定义查找策略
         teleport = self.wait_until(find_func, time_out=time_out, raise_if_not_found=True)
@@ -548,7 +563,7 @@ class BaseNTETask(
 
         return teleport
 
-    def click_nearest_map_teleport(self, zoom="mid", threshold=0.7, time_out=5):
+    def click_nearest_map_teleport(self, zoom="low", threshold=0.7, time_out=5):
         """
         从屏幕中心向外延展搜索，点击最近的传送点
         """
@@ -581,7 +596,7 @@ class BaseNTETask(
             find_func=find_nearest_teleport, zoom=zoom, time_out=time_out
         )
 
-    def click_map_teleport(self, box, zoom="mid", threshold=0.7, time_out=5):
+    def click_map_teleport(self, box, zoom="low", threshold=0.7, time_out=5):
         """
         在指定的 box 区域内搜索并点击传送点
         :param box: Box 对象，指定查找的固定范围
@@ -596,6 +611,13 @@ class BaseNTETask(
         return self._execute_map_teleport(
             find_func=find_teleport_in_box, zoom=zoom, time_out=time_out
         )
+
+    def teleport_on_spot(self, zoom="mid"):
+        self.ensure_main()
+        self.open_map(zoom=zoom)
+        self.operate_click(0.5, 0.5, action_name="click_map_teleport")
+        self.sleep(0.5)
+        return self.click_traval_button(raise_if_not_found=False)
 
     def click_traval_button(self, travel_btn=None, raise_if_not_found=True):
         if not isinstance(travel_btn, Box):
@@ -643,6 +665,20 @@ class BaseNTETask(
         self.sleep(0.5)
         return result
 
+    def openF4panel(self):
+        def action():
+            if self.is_in_team():
+                self.send_key("f4", after_sleep=1)
+                self.log_info("send f4 key to open the panel")
+            return self.wait_panel(Labels.f4_panel)
+
+        result = self.retry_on_action(action, self.ensure_main)
+        if not result:
+            self.log_error("can't find panel, make sure f4 is the hotkey for panel", notify=True)
+            raise CannotFindException("can't find panel, make sure f4 is the hotkey for panel")
+        self.sleep(0.5)
+        return result
+
     def openF5panel(self):
         def action():
             if self.is_in_team():
@@ -680,12 +716,12 @@ class BaseNTETask(
         logger.info(f"found {feature} {result}")
         return result
 
-    def ensure_main(self, esc=True, in_world=False, time_out=30):
+    def ensure_main(self, esc=True, in_world=False, check_exit=False, time_out=30):
         self.info_set("current task", f"wait main esc={esc}")
         if not self.scene.logged_in():
             time_out = 600
         if not self.wait_until(
-            lambda: self.is_main(esc=esc, in_world=in_world),
+            lambda: self.is_main(esc=esc, in_world=in_world, check_exit=check_exit),
             time_out=time_out,
             raise_if_not_found=False,
             settle_time=0.25,
@@ -698,13 +734,15 @@ class BaseNTETask(
         self.sleep(0.5)
         self.info_set("current task", None)
 
-    def is_main(self, esc=True, in_world=True):
+    def is_main(self, esc=True, in_world=True, check_exit=False):
         if in_world:
             in_team_or_world = bool(self.in_team_and_world())
         else:
             in_team_or_world = bool(self.is_in_team())
         if in_team_or_world:
             self.scene.set_logged_in()
+            if check_exit and self.find_exit():
+                self.exit_anomaly()
             return True
         if self.handle_monthly_card(log=False):
             return
@@ -817,7 +855,7 @@ class BaseNTETask(
     def rotate_and_find_treasure(self):
         return self.rotate_and_find(self.find_treasure, self.find_interac)
 
-    def send_interac(self, handle_claim=True):
+    def send_interac(self, handle_claim=False):
         if self.find_interac():
             self.send_key("f", after_sleep=0.8)
             if not handle_claim:

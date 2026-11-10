@@ -66,11 +66,16 @@ class Akane(BaseChar):
     def perform_ult_combo(self):
         timer = self.clock.timer(timeout=13)
         while not timer.expired():
-            if self.skill_2_count > 0 or not self.in_ult(time_offset=2):
-                if self.click_ultimate():
-                    self.in_ult_start = self.clock.UNSET
-                    self.skill_2_count = 0
-                    return
+            ult_ended = (
+                self.skill_2_count > 0 and timer.elapsed() > 3 and not self.ultimate_available()
+            )
+            if not ult_ended and (self.skill_2_count > 0 or not self.in_ult(time_offset=2)):
+                ult_ended = self.click_ultimate()
+
+            if ult_ended:
+                self.in_ult_start = self.clock.UNSET
+                self.skill_2_count = 0
+                return
 
             self.click()
 
@@ -81,6 +86,8 @@ class Akane(BaseChar):
                         if self.click_skill():
                             if not self.task._boss_fight:
                                 self.continues_normal_attack(1)
+                            else:
+                                self.continues_normal_attack(0.25)
                             self.skill_2_count += 1
                     else:
                         self.cast_skill()
