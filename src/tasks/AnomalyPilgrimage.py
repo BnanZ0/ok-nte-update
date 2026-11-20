@@ -13,6 +13,7 @@ from ok import (
 
 from src.combat.BaseCombatTask import BaseCombatTask, TeamSurvivalStatus
 from src.tasks.BaseStaminaTask import BaseStaminaTask
+from src.ui.icons import task_icon
 from src.utils.game_templates import WEEKLYBOSS_ITEM
 
 
@@ -46,6 +47,9 @@ class AnomalyPilgrimage(BaseStaminaTask, BaseCombatTask):
         super().__init__(*args, **kwargs)
         self.name = self.TASK_NAME
         self.description = "按目标清单顺序进行异象巡礼"
+        self.icon = task_icon("anomaly_pil")
+        self.group_name = "体力本"
+        self.group_icon = task_icon("stam")
         self.setup_config(self)
 
     @classmethod
@@ -181,7 +185,7 @@ class AnomalyPilgrimage(BaseStaminaTask, BaseCombatTask):
         self.operate_click(x, y / self.height, after_sleep=0.5)
         self.click_traval_button()
         self.wait_in_team(time_out=300)
-        self.open_stamina_panel()
+        self.open_anomaly_entrance()
         self.wait_click_confirm(range=self.CHALLENGE_CONFIRM_BOX)
         self.wait_click_confirm(range=self.TEAM_CONFIRM_BOX)
         self.wait_in_team(time_out=300)

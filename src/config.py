@@ -8,11 +8,12 @@ from src import GAME_EXE
 from src.audio.routing import create_background_audio_routing_config_option
 from src.interaction.NTEInteraction import NTEInteraction
 from src.process_feature import process_feature
+from src.ui.icons import feature_icon
 
 if "PATH" not in os.environ:
     os.environ["PATH"] = ""
 
-version = "v1.5.8"
+version = "v1.5.9"
 # 不需要修改version, Github Action打包会自动修改
 
 key_config_option = ConfigOption(
@@ -76,6 +77,18 @@ config = {
     "plugin": True,
     "gui": {
         "type": "qt",
+    },
+    "task_category_icons": {
+        "all": feature_icon("all-task"),
+        "onetime": feature_icon("onetime-task"),
+        "trigger": feature_icon("trigger-task"),
+    },
+    "task_category_colors": {
+        "all": {"light": "#526174", "dark": "#B5BECF"},
+        "onetime": {"light": "#087C70", "dark": "#72D9CC"},
+        "trigger": {"light": "#AC3652", "dark": "#F09AA8"},
+        "group:体力本": {"light": "#2668AA", "dark": "#8ABCF0"},
+        "group:都市闲趣": {"light": "#8C651A", "dark": "#E8C27C"},
     },
     "debug": False,  # Optional, default: False
     "use_gui": True,  # 目前只支持True
@@ -210,7 +223,7 @@ config = {
         # 测试相关
         ["src.tasks.CombatDetectionTestTask", "CombatDetectionTestTask"],
         ["src.tasks.DebugCharTask", "DebugCharTask"],
-        ["ok", "DiagnosisTask"],
+        # ["ok", "DiagnosisTask"],
         # 日常相关
         ["src.tasks.daily.DailyClaimTask", "DailyClaimTask"],
         ["src.tasks.daily.GiftTask", "GiftTask"],
@@ -237,8 +250,8 @@ config = {
     ],
     "scene": ["src.scene.NTEScene", "NTEScene"],
     "update_pyappify": {
-        "to_version": "1.2.6",
-        "zip_url": "https://github.com/BnanZ0/ok-nte/releases/download/v1.5.0/ok-nte-win32.zip",
-        "sha256": "2d2a6dee7970e626cc3ed4ec8a3078f0808c3a01b9cf45551a94403a0c1749b2",
+        "to_version": "1.2.9",
+        "zip_url": "https://github.com/BnanZ0/ok-nte/releases/download/v1.5.9/ok-nte-win32.zip",
+        "sha256": "168939287029e1e1b4781bd4dd053a46b0bfa5d6130e24f149244a13b311e0ba",
     },
 }

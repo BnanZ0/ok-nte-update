@@ -10,7 +10,7 @@ from src.Labels import Labels
 from src.tasks.BaseNTETask import BaseNTETask
 from src.tasks.flow.scene_flow import SceneReplan, StepFailure, StepPolicy
 from src.tasks.NTEOneTimeTask import NTEOneTimeTask
-from src.ui.task_icons import Icon
+from src.ui.icons import task_icon
 from src.utils import image_utils as iu
 
 
@@ -51,8 +51,9 @@ class FishingTask(NTEOneTimeTask, BaseNTETask):
         super().__init__(*args, **kwargs)
         self.name = "自动钓鱼"
         self.description = "自动完成一轮或多轮钓鱼"
+        self.icon = task_icon("fish")
         self.group_name = "都市闲趣"
-        self.group_icon = Icon.GAME
+        self.group_icon = task_icon("city_fun")
         self.add_rounds_config()
         self.default_config.update(
             {
@@ -428,11 +429,10 @@ class FishingTask(NTEOneTimeTask, BaseNTETask):
         settle_time=1.0,
         raise_if_not_found=True,
     ):
-        if range is None:
-            range = (0.641, 0.610, 0.713, 0.698)
+        confirm_range = (0.641, 0.610, 0.713, 0.698) if range is None else range
         return super().wait_click_confirm(
             pre_action=pre_action,
-            range=range,
+            range=confirm_range,
             on_found=on_found,
             time_out=time_out,
             settle_time=settle_time,
@@ -470,7 +470,7 @@ class FishingTask(NTEOneTimeTask, BaseNTETask):
             self.apply_bar_control_hold(state)
 
     def apply_bar_control_hold(self, state: dict):
-        pointer_center, pointer_width, zone_center, zone_width = self._bar_metrics(state)
+        pointer_center, pointer_width, zone_center, _ = self._bar_metrics(state)
         error = pointer_center - zone_center
         abs_error = abs(error)
         deadzone = max(2, int(pointer_width * 3))

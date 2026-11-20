@@ -4,6 +4,7 @@ from src.Labels import Labels
 from src.tasks.NTEOneTimeTask import NTEOneTimeTask
 from src.tasks.RecordTask import RecordTask
 from src.tasks.trigger.SkipDialogTask import SkipDialogTask
+from src.ui.icons import task_icon
 
 INST = "进入比赛后开始任务"
 EN_INST = "Start the mission after entering the game"
@@ -20,8 +21,7 @@ EN_RECORD_INS = (
 )
 
 RECORD_NOTIFICATION = (
-    "未找到已录制的操作。在可以选择球员时将会出现录制提示\n"
-    "请按照指引，仔细完成操作录制。"
+    "未找到已录制的操作。在可以选择球员时将会出现录制提示\n请按照指引，仔细完成操作录制。"
 )
 
 EN_RECORD_NOTIFICATION = (
@@ -42,7 +42,9 @@ class VolleyballTask(NTEOneTimeTask, RecordTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = "排球之星"
+        self.icon = task_icon("vball")
         self.group_name = "都市闲趣"
+        self.group_icon = task_icon("city_fun")
         self.default_config.update(
             {
                 self.CONF_MODE: self.MODE_EXP,
@@ -146,10 +148,6 @@ class VolleyballTask(NTEOneTimeTask, RecordTask):
                 if self.send_key(key, interval=0.5):
                     self._play_count += 1
                     return ("j" if switch_key else "k"), not switch_key
-            case (self.MODE_SUP, _):
-                pass
-            case (self.MODE_WC, _):
-                pass
         return key, switch_key
 
     def handle_match_end(self):
@@ -170,8 +168,6 @@ class VolleyballTask(NTEOneTimeTask, RecordTask):
                         )
                 if box:
                     self.operate_click(box, after_sleep=0.5)
-            case self.MODE_SUP:
-                pass
             case self.MODE_WC:
                 if box := self.find_one(Labels.volleyball_wc_next):
                     self._wc_next = True
