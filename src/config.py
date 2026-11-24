@@ -13,7 +13,7 @@ from src.ui.icons import feature_icon
 if "PATH" not in os.environ:
     os.environ["PATH"] = ""
 
-version = "v1.5.10"
+version = "v1.5.11"
 # 不需要修改version, Github Action打包会自动修改
 
 key_config_option = ConfigOption(
@@ -75,6 +75,15 @@ def blur_area(width, height):
 config = {
     "custom_tasks": True,  # enable creating and editing custom tasks
     "plugin": True,
+    "plugin_repositories": [  # 未安装的 GitHub 插件会显示在插件页
+        # 只填 URL 字符串时, 使用仓库名称并显示于所有界面语言。
+        {
+            "url": "https://github.com/Camellune/ok-nte-cultivation-goal",
+            "name": "消耗体力培养角色",  # 可选, 默认显示仓库名称
+            "file_name": "cultivation_goal",  # 可选, 对应插件清单, 用于识别本地安装
+            "supported_languages": ["zh_CN"],  # 可选, 省略或留空时不限语言
+        },
+    ],
     "gui": {
         "type": "qt",
     },
@@ -129,6 +138,19 @@ config = {
         "force_no_hdr": False,  # True=当用户开启AutoHDR时候禁止使用
         "require_bg": True,  # 要求使用后台截图
         "start_exe": False,
+    },
+    "browser": {
+        "url": "https://yh.wanmei.com/cloud/",
+        "resolution": (1920, 1080),
+        "channels": ["msedge", "chrome", "chromium"],
+        "navigation_timeout": 120,
+        # Keep SDR video in the compositor; direct video overlays clip WGC colors on HDR displays.
+        "args": [
+            "--webrtc-ip-handling-policy=default",
+            "--force-color-profile=srgb",
+            "--disable-direct-composition",
+        ],
+        "nick": "云游戏(未经充分测试, 需要Win11并安装Chrome或Edge)",
     },
     # 'adb': {  # Windows游戏请填写此设置, mumu模拟器使用原生截图和input,速度极快. 其他模拟器和真机使用adb,截图速度较慢
     #     'packages': ['com.abc.efg1', 'com.abc.efg1']
