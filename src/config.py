@@ -13,7 +13,7 @@ from src.ui.icons import feature_icon
 if "PATH" not in os.environ:
     os.environ["PATH"] = ""
 
-version = "v1.5.11"
+version = "v1.5.12"
 # 不需要修改version, Github Action打包会自动修改
 
 key_config_option = ConfigOption(
