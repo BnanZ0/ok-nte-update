@@ -552,12 +552,19 @@ class BaseNTETask(
             max_conf = 0
             max_box = None
             for feature_name in to_find:
-                feature = self.find_sift_feature(feature_name, box=box)
+                feature = self.find_one_scaled(
+                    feature_name,
+                    box=box,
+                    scale_range=(0.9, 1.0),
+                    scale_step=0.05,
+                    threshold=0.7,
+                    use_gray_scale=True,
+                )
                 if feature and feature.confidence > max_conf:
                     max_conf = feature.confidence
                     max_box = feature
             if max_box:
-                self.operate_click(box, after_sleep=1)
+                self.operate_click(max_box, after_sleep=1)
         self.click_traval_button()
 
         return teleport
@@ -1157,9 +1164,17 @@ def interac_mask(image):
 
 
 def confirm_mask(image):
+    import cv2
+    import numpy as np
+
     mask = iu.create_color_mask(image, text_black_color, to_bgr=False)
     dilated_mask = iu.morphology_mask(mask, kernel_size=5, to_bgr=False)
-    return dilated_mask
+    pts = cv2.findNonZero(mask)
+    if pts is None:
+        return dilated_mask
+    hull = cv2.convexHull(pts)
+    inner = cv2.fillConvexPoly(np.zeros_like(mask), hull, 255)
+    return cv2.bitwise_and(dilated_mask, inner)
 
 
 def exit_mask(image):
